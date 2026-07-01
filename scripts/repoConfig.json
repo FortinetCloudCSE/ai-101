@@ -1,39 +1,49 @@
 {
-  "repoName":"UserRepo",
-  "author":"Jeff Kopko",
-  "workshopTitle":"Hugo for Fortinet TECWorkshops",
-  "themeVariant":"CloudCSEMovie",
-  "logoBannerText":"FortiHugo",
-  "logoBannerSubText":"",
-  "errorLevel":"warning",
-  "googleServicesID":"G-5RZBH288ST",
-  "marketingCode": "FortiHugo202",
-  "videoHeaderSrc": "/videos/CloudsAnimated.mp4",
-  "videoHeaderInterval": "60",
+  "repoName": "ai-101",
+  "author": "Fortinet Cloud CSE",
+  "workshopTitle": "AI 101 — Agents, MCP & the Agentic Security Model",
+  "themeVariant": "Workshop",
+  "logoBannerText": "AI 101",
+  "logoBannerSubText": "Agents, MCP & Security",
+  "errorLevel": "warning",
+  "googleServicesID": "",
+  "marketingCode": "",
   "shortcuts": [
-  {
-    "text": "Fortinet Cloud CSE GitHub Org",
-    "URL": "https://github.com/FortinetCloudCSE",
-    "icon": "fa-graduation-cap",
-    "weight":10
-  },
-  {
-    "text": "Fortinet Standard Workshop Guide",
-    "URL": "https://fortinetcloudcse.github.io/UserRepo",
-    "icon": "fa-tools",
-    "weight":20
-  },
-  {
-    "text": "Fortinet Standard Workshop Template Repo",
-    "URL": "https://github.com/FortinetCloudCSE/UserRepo",
-    "icon": "fa-tools",
-    "weight":30
-  },
-  {
-    "text": "Fortinet Hugo reLearn theme - Guide",
-    "URL": "https://mcshelby.github.io/hugo-theme-relearn/index.html",
-    "icon": "fa-tools",
-    "weight":40
-  }
+    {
+      "text": "Lab App on GitHub",
+      "URL": "https://github.com/FortinetCloudCSE/ai-101",
+      "icon": "fa-code",
+      "weight": 10
+    },
+    {
+      "text": "FortiAIGate Workshop",
+      "URL": "https://fortinetcloudcse.github.io/faig-training-workshop/",
+      "icon": "fa-shield",
+      "weight": 20
+    },
+    {
+      "text": "Fortinet Cloud CSE",
+      "URL": "https://github.com/FortinetCloudCSE",
+      "icon": "fa-graduation-cap",
+      "weight": 30
+    },
+    {
+      "text": "MCP Specification",
+      "URL": "https://modelcontextprotocol.io",
+      "icon": "fa-book",
+      "weight": 40
+    },
+    {
+      "text": "OWASP LLM Top 10",
+      "URL": "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
+      "icon": "fa-list-ol",
+      "weight": 50
+    },
+    {
+      "text": "OWASP MCP Top 10",
+      "URL": "https://owasp.org/www-project-mcp-top-10/",
+      "icon": "fa-list-ol",
+      "weight": 60
+    }
   ]
 }
