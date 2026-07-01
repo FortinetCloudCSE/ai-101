@@ -1,0 +1,24 @@
+# Lab 3 — agent with MCP tool discovery.
+#
+# Swaps agent toolMode to mcp, adds the MCP server.
+# Agent code is IDENTICAL to lab2 — only the env var changes.
+# Students run /tools/refresh to pick up search_web without restarting the agent.
+#
+# To add the extra tool mid-lab without rebuilding anything:
+#   helm upgrade ai101 ./ai101 -f values-lab3.yaml \
+#       --set mcpServer.enableExtraTool=true
+
+ollama:
+  enabled: true
+
+agent:
+  enabled: true
+  toolMode: mcp
+  transparency: verbose
+
+mcpServer:
+  enabled: true
+  enableExtraTool: false
+
+ui:
+  enabled: true

@@ -1,0 +1,15 @@
+# Lab 2 — agent with hardcoded tools.
+#
+# Adds the FastAPI agent (TOOL_MODE=hardcoded) and the nginx UI.
+# Students observe the explicit tool-call loop in the Trace panel.
+
+ollama:
+  enabled: true
+
+agent:
+  enabled: true
+  toolMode: hardcoded
+  transparency: verbose
+
+ui:
+  enabled: true

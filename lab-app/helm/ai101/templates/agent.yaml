@@ -1,0 +1,75 @@
+{{- if .Values.agent.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-agent
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: agent
+    spec:
+      containers:
+        - name: agent
+          image: {{ include "ai101.image" (dict "root" . "name" .Values.agent.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # ── Day 2 swap point ────────────────────────────────────────────
+            # On Day 2, override this with your FortiAIGate endpoint:
+            #   --set agent.openaiBaseUrl=https://fortiaigate.example.com/v1
+            # Everything else stays the same.
+            - name: OPENAI_BASE_URL
+              value: {{ .Values.agent.openaiBaseUrl | quote }}
+            - name: MODEL
+              value: {{ .Values.agent.model | quote }}
+            - name: TOOL_MODE
+              value: {{ .Values.agent.toolMode | quote }}
+            - name: TRANSPARENCY
+              value: {{ .Values.agent.transparency | quote }}
+            - name: MCP_BASE_URL
+              value: {{ .Values.agent.mcpBaseUrl | quote }}
+          ports:
+            - name: http
+              containerPort: 8001
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-agent
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: agent
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: agent
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http
+{{- end }}

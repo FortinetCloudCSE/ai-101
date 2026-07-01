@@ -1,0 +1,9 @@
+# Lab 1 — direct LLM inference.
+#
+# Starts Ollama only. Students hit the /v1/chat/completions endpoint directly
+# using the scripts in lab-app/scripts/ to explore prompt injection.
+#
+# No agent, no MCP, no UI.
+
+ollama:
+  enabled: true

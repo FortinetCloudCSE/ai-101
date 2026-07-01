@@ -1,0 +1,121 @@
+{{- if .Values.ui.enabled }}
+---
+# Override the baked-in nginx.conf with one that uses the correct K8s service name.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-ui-nginx
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+data:
+  default.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location /api/ {
+            proxy_pass         http://{{ .Release.Name }}-agent:8001/;
+            proxy_set_header   Host $host;
+            proxy_read_timeout 180s;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-ui
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: ui
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: ui
+    spec:
+      containers:
+        - name: ui
+          image: {{ include "ai101.image" (dict "root" . "name" .Values.ui.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ .Release.Name }}-ui-nginx
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-ui
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
+spec:
+  type: {{ .Values.ui.service.type }}
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: ui
+  ports:
+    - name: http
+      port: {{ .Values.ui.service.port }}
+      targetPort: http
+{{- if .Values.ui.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Release.Name }}-ui
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ui
+spec:
+  {{- if .Values.ui.ingress.className }}
+  ingressClassName: {{ .Values.ui.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ui.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Release.Name }}-ui
+                port:
+                  name: http
+  {{- if .Values.ui.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ui.ingress.tls | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}
