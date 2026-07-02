@@ -1,0 +1,22 @@
+default:
+  sast:
+    enabled: true
+    scan:
+      exceptions:
+        # CWE-89: String concatenation in SQL is intentional — this vulnerability
+        # is the attack surface demonstrated in Lab 4 (SQL injection via agent tool
+        # call). Fixing it would remove the teaching material.
+        - "path:lab-app/images/agent/tools.py:Intentional SQL injection — CWE-89 is the attack demonstrated in Lab 4"
+        - "path:lab-app/images/mcp-server/server.py:Intentional SQL injection — CWE-89 is the attack demonstrated in Lab 4"
+  iac:
+    enabled: true
+    scan:
+      exceptions:
+        # Workshop lab containers only — no sensitive data, no production traffic.
+        # Non-root user adds volume-mount ownership complexity not appropriate for
+        # a training environment. HEALTHCHECK is defined in docker-compose.yaml
+        # and the Helm chart, not in the Dockerfiles.
+        - "path:lab-app/images/agent/Dockerfile:Workshop container — non-root user not required for lab; HEALTHCHECK defined in compose"
+        - "path:lab-app/images/mcp-server/Dockerfile:Workshop container — non-root user not required for lab; HEALTHCHECK defined in compose"
+        - "path:lab-app/images/ui/Dockerfile:Workshop container — non-root user not required for lab; HEALTHCHECK defined in compose"
+        - "path:lab-app/images/ollama/Dockerfile:Workshop container — non-root user not required for lab; HEALTHCHECK defined in compose"
