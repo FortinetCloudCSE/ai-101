@@ -348,7 +348,7 @@
   // ── Health + status ───────────────────────────────────────────────────────
   async function checkHealth() {
     try {
-      const r = await fetch('/api/healthz');
+      const r = await fetch('/api/health');
       const d = await r.json();
       document.getElementById('status-badge').textContent =
         `${d.tool_mode} · ${d.model}`;

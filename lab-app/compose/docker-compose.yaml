@@ -66,7 +66,7 @@ services:
     profiles: ["lab2"]
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8001/healthz')"]
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
       timeout: 5s
       retries: 6
@@ -97,7 +97,7 @@ services:
     profiles: ["lab3", "lab4"]
     healthcheck:
       test: ["CMD", "python", "-c",
-             "import urllib.request; urllib.request.urlopen('http://localhost:8001/healthz')"]
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 10s
       timeout: 5s
       retries: 6

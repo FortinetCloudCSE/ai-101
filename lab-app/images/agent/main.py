@@ -240,8 +240,8 @@ async def _run_agent(message: str, session_id: str) -> dict:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
-@app.get("/healthz")
-async def healthz():
+@app.get("/health")
+async def health():
     return {"status": "ok", "tool_mode": TOOL_MODE, "model": MODEL,
             "transparency": TRANSPARENCY}
 
