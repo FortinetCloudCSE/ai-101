@@ -198,6 +198,12 @@ a lot of confusion when you are reading code or debugging.
 }
 ```
 
+`stream: false` returns the full response as a single JSON object once generation
+is complete. Set it to `true` and the API streams tokens as server-sent events
+— useful for responsive chat UIs, but it changes the response format and
+complicates the agent loop (you must accumulate chunks before parsing
+`finish_reason`). This workshop uses `false` throughout.
+
 ### Response
 
 ```json
@@ -434,11 +440,17 @@ tool access, and a poisoned tool description that hides instructions inside
 what the model treats as its own internal documentation.
 
 {{% notice style="tip" title="Terminology: prompt injection" %}}
-**Prompt injection** is listed as LLM01 in the OWASP Top 10 for LLM
-Applications — the top-ranked risk for LLM systems. Unlike SQL or shell
-injection, the "parser" is a statistical model, so there is no clean patch.
-Mitigations focus on input filtering, output validation, and enforcing
-authorization at the tool-call layer rather than trusting the model to refuse.
+Two OWASP Top 10 for LLM Applications (2025) categories are demonstrated in
+Lab 1:
+
+- **LLM01 — Prompt Injection**: the top-ranked risk. Unlike SQL or shell
+  injection, the "parser" is a statistical model so there is no clean patch.
+  Mitigations focus on input filtering, output validation, and enforcing
+  authorization at the tool-call layer rather than trusting the model to refuse.
+- **LLM07 — System Prompt Leakage**: confidential content placed in the system
+  prompt (the override code) is extracted via injection. The system prompt is
+  not a secrets store — anything in the context window can be retrieved if the
+  model is manipulated into outputting it.
 
 Reference: [OWASP Top 10 for LLM Applications](https://owasp.org/www-project-top-10-for-large-language-model-applications/)
 {{% /notice %}}

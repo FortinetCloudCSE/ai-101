@@ -83,6 +83,12 @@ the model knows which result belongs to which call. If the model requested
 three tool calls, you return three tool results, each tagged with the
 corresponding id.
 
+This workshop's implementation runs multiple tool calls **sequentially** — a
+`for` loop over `msg["tool_calls"]`, one at a time. Parallel execution is
+possible (Python's `asyncio.gather`) but adds complexity. For the lab's two
+tools the difference is unnoticeable; for a production agent calling slow
+external APIs it matters.
+
 ---
 
 ## Tool schemas
@@ -158,6 +164,22 @@ If the model chains two tool calls across two iterations:
 The entire list goes into every LLM call. The context window shrinks with
 each round trip. For deep tool chains, this matters — a model with a limited
 context window may lose earlier messages if the chain grows long enough.
+
+### One call, one conversation
+
+The agent in this workshop is stateless across `/chat` calls. Each request
+builds the message list from scratch — system prompt plus the single user
+message in that request. The model has no memory of previous `/chat` calls.
+
+`session_id` in the request body is for **log grouping only** — it tags audit
+log entries so you can filter by session. It does not cause the agent to replay
+previous messages. If you want a multi-turn conversation, your client must resend
+the full history in each request, the same way any chat application does (as
+covered in Module 1 statelessness).
+
+This is intentional simplicity for the workshop. Production agents typically
+maintain per-session message history on the server side or push that
+responsibility to the client.
 
 ---
 
