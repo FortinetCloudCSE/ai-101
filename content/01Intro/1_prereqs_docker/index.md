@@ -48,7 +48,7 @@ Docker volume for all subsequent runs.
 curl -s http://localhost:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"qwen2.5:3b","messages":[{"role":"user","content":"ping"}]}' \
-  | python3 -c "import json,sys; print(json.load(sys.stdin)['choices'][0]['message']['content'])"
+  | jq -r '.choices[0].message.content'
 ```
 
 Expected: a short reply from the model (exact text varies).
