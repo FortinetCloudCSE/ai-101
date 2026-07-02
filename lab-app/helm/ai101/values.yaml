@@ -1,0 +1,105 @@
+# AI-101 Helm values — base configuration.
+#
+# Workshop modules are selected by layering a module-specific values file:
+#
+#   helm upgrade --install ai101 ./ai101 \
+#       -f values-lab2.yaml
+#
+# Optional — route through FortiAIGate instead of local Ollama:
+#
+#   helm upgrade --install ai101 ./ai101 \
+#       -f values-lab4.yaml \
+#       --set agent.openaiBaseUrl=https://your-fortiaigate-host/v1
+#
+# That single value is the only change required between Day 1 and Day 2.
+# The agent image, the MCP server, and the UI all stay exactly the same.
+
+image:
+  registry: ghcr.io/fortinetcloudcse/ai-101
+  tag: v0.1.0
+  pullPolicy: IfNotPresent
+
+# ── Ollama ────────────────────────────────────────────────────────────────────
+ollama:
+  enabled: false
+  image: ollama
+  model: qwen2.5:3b
+  keepAlive: "-1"
+  storage:
+    size: 10Gi
+    storageClassName: ""   # leave blank to use cluster default
+  resources:
+    requests:
+      memory: "4Gi"
+      cpu: "1"
+    limits:
+      memory: "8Gi"
+
+# ── Agent ─────────────────────────────────────────────────────────────────────
+agent:
+  enabled: false
+  image: agent
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Day 2 swap point.
+  #
+  # Day 1: leave this at the default — the agent talks to the Ollama sidecar
+  # running in the same cluster.
+  #
+  # Day 2: set this to your FortiAIGate endpoint.  Everything else —
+  # the agent image, system prompt, tool schemas, MCP wiring — stays identical.
+  # Only the LLM endpoint changes.
+  #
+  # Example:
+  #   --set agent.openaiBaseUrl=https://fortiaigate.example.com/v1
+  # ──────────────────────────────────────────────────────────────────────────
+  openaiBaseUrl: http://ai101-ollama:11434/v1
+
+  model: qwen2.5:3b
+  toolMode: hardcoded       # hardcoded | mcp  (controlled by module values file)
+  transparency: verbose     # verbose | quiet  (Lab 4 contrast)
+  mcpBaseUrl: http://ai101-mcp-server:8000/mcp
+
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+
+# ── MCP server ────────────────────────────────────────────────────────────────
+mcpServer:
+  enabled: false
+  image: mcp-server
+  enableExtraTool: false
+  poisonDesc: false
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+
+# ── UI ────────────────────────────────────────────────────────────────────────
+ui:
+  enabled: false
+  image: ui
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  # Set to true and configure ingress if you want to expose the UI externally.
+  ingress:
+    enabled: false
+    className: ""
+    host: ai101.example.com
+    tls: []
+
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "10m"
+    limits:
+      memory: "128Mi"

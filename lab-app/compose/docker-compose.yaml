@@ -1,0 +1,136 @@
+---
+# AI-101 Lab — Docker Compose
+#
+# Usage:
+#   Lab 1  (raw inference, Ollama only):
+#     docker compose --profile lab1 up -d
+#
+#   Lab 2  (agent with hardcoded tools + UI):
+#     docker compose --profile lab2 up -d
+#
+#   Lab 3  (MCP server, dynamic tool discovery):
+#     docker compose --profile lab3 up -d
+#
+#   Lab 4  (security demo — same stack as lab3):
+#     docker compose --profile lab4 up -d
+#
+# Enable the extra MCP tool mid-lab without restarting the agent:
+#   ENABLE_EXTRA_TOOL=true docker compose --profile lab3 up -d mcp-server
+#   curl -X POST http://localhost:8001/tools/refresh
+#
+# Optional — route through FortiAIGate instead of local Ollama:
+#   OPENAI_BASE_URL=https://your-fortiaigate-host/v1 \
+#     docker compose --profile lab4 up -d
+#
+
+name: ai101
+
+services:
+
+  # ── Ollama (all labs) ─────────────────────────────────────────────────────
+  ollama:
+    build:
+      context: ../images/ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    volumes:
+      - ollama-data:/root/.ollama
+    ports:
+      - "11434:11434"
+    profiles: ["lab1", "lab2", "lab3", "lab4"]
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # ── Agent — hardcoded tools (Lab 2) ───────────────────────────────────────
+  agent:
+    build:
+      context: ../images/agent
+    environment:
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://ollama:11434/v1}
+      MODEL:           ${OLLAMA_MODEL:-qwen2.5:3b}
+      TOOL_MODE:       hardcoded
+      TRANSPARENCY:    verbose
+    ports:
+      - "8001:8001"
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      default:
+        aliases: [agent]
+    profiles: ["lab2"]
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # ── Agent — MCP mode (Labs 3 & 4) ─────────────────────────────────────────
+  # Same image as the lab2 agent, different env vars only.
+  # The network alias 'agent' lets the UI resolve it regardless of which
+  # agent service is active.
+  agent-mcp:
+    build:
+      context: ../images/agent
+    environment:
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-http://ollama:11434/v1}
+      MODEL:           ${OLLAMA_MODEL:-qwen2.5:3b}
+      TOOL_MODE:       mcp
+      MCP_BASE_URL:    http://mcp-server:8000/mcp
+      TRANSPARENCY:    ${TRANSPARENCY:-verbose}
+    ports:
+      - "8001:8001"
+    depends_on:
+      ollama:
+        condition: service_healthy
+      mcp-server:
+        condition: service_started
+    networks:
+      default:
+        aliases: [agent]
+    profiles: ["lab3", "lab4"]
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # ── MCP server (Labs 3 & 4) ───────────────────────────────────────────────
+  mcp-server:
+    build:
+      context: ../images/mcp-server
+    environment:
+      ENABLE_EXTRA_TOOL: ${ENABLE_EXTRA_TOOL:-false}
+      POISON_DESC:       ${POISON_DESC:-false}
+    ports:
+      - "8000:8000"
+    profiles: ["lab3", "lab4"]
+
+  # ── UI (Labs 2–4) ─────────────────────────────────────────────────────────
+  ui:
+    build:
+      context: ../images/ui
+    ports:
+      - "8080:80"
+    depends_on:
+      - agent
+    profiles: ["lab2"]
+
+  ui-mcp:
+    build:
+      context: ../images/ui
+    ports:
+      - "8080:80"
+    depends_on:
+      - agent-mcp
+    profiles: ["lab3", "lab4"]
+
+volumes:
+  ollama-data:

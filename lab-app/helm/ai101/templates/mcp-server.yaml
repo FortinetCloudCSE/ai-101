@@ -1,0 +1,69 @@
+{{- if .Values.mcpServer.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-mcp-server
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: mcp-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: mcp-server
+    spec:
+      containers:
+        - name: mcp-server
+          image: {{ include "ai101.image" (dict "root" . "name" .Values.mcpServer.image) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            # ENABLE_EXTRA_TOOL=true adds search_web without restarting the agent —
+            # students call /tools/refresh and see the new tool appear live.
+            - name: ENABLE_EXTRA_TOOL
+              value: {{ .Values.mcpServer.enableExtraTool | quote }}
+            # POISON_DESC=true embeds hidden instructions in search_web's description.
+            # Only meaningful when ENABLE_EXTRA_TOOL=true. Lab 4 advanced demo.
+            - name: POISON_DESC
+              value: {{ .Values.mcpServer.poisonDesc | quote }}
+          ports:
+            - name: http
+              containerPort: 8000
+          readinessProbe:
+            httpGet:
+              path: /mcp
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /mcp
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.mcpServer.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-mcp-server
+  labels:
+    {{- include "ai101.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mcp-server
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: mcp-server
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+{{- end }}

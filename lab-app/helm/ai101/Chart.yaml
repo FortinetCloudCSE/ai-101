@@ -1,0 +1,15 @@
+apiVersion: v2
+name: ai101
+description: AI-101 workshop — LLM inference, agents, MCP, and agentic security
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - llm
+  - agents
+  - mcp
+  - security
+  - workshop
+maintainers:
+  - name: FortinetCloudCSE

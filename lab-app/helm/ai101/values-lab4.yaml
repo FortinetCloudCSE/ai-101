@@ -1,0 +1,39 @@
+# Lab 4 — agentic security demo.
+#
+# Same stack as lab3. TRANSPARENCY defaults to verbose so students can
+# watch the audit log. Flip to quiet mid-demo to show the contrast:
+#
+#   helm upgrade ai101 ./ai101 -f values-lab4.yaml \
+#       --set agent.transparency=quiet
+#
+# Tool-poisoning demo (POISON_DESC) requires ENABLE_EXTRA_TOOL=true:
+#
+#   helm upgrade ai101 ./ai101 -f values-lab4.yaml \
+#       --set mcpServer.enableExtraTool=true \
+#       --set mcpServer.poisonDesc=true
+#
+# ── Optional: FortiAIGate integration ───────────────────────────────────────
+# Route through FortiAIGate instead of local Ollama — one value change:
+#
+#   helm upgrade ai101 ./ai101 -f values-lab4.yaml \
+#       --set agent.openaiBaseUrl=https://your-fortiaigate-host/v1
+#
+# The agent, MCP server, and UI are untouched. See the FortiAIGate workshop
+# for policy configuration: https://fortinetcloudcse.github.io/faig-training-workshop/
+# ────────────────────────────────────────────────────────────────────────────
+
+ollama:
+  enabled: true
+
+agent:
+  enabled: true
+  toolMode: mcp
+  transparency: verbose
+
+mcpServer:
+  enabled: true
+  enableExtraTool: false
+  poisonDesc: false
+
+ui:
+  enabled: true
