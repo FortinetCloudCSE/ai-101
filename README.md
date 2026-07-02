@@ -1,7 +1,7 @@
 
-# faig-training-ai-101
+# AI 101 - Agents, MCP & the Agentic Security Model
 
-To view the workshop, please go here: [GitHub Pages Link](https://fortinetcloudcse.github.io/faig-training-ai-101/)
+To view the workshop, please go here: [GitHub Pages Link](https://fortinetcloudcse.github.io/ai-101/index.html)
 
 ---
 
