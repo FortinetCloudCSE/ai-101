@@ -14,13 +14,13 @@ demo:
 	@echo "==> Starting AI-101 Day 1 demo stack (module 4)..."
 	cd $(COMPOSE_DIR) && docker compose --profile lab4 up -d
 	@echo "==> Waiting for agent to become healthy..."
-	@until curl -sf http://localhost:8001/healthz > /dev/null 2>&1; do \
+	@until curl -sf http://localhost:8001/health > /dev/null 2>&1; do \
 		printf '.'; sleep 2; \
 	done
 	@echo ""
 	@echo "==> Stack ready."
 	@echo "    UI:    http://localhost:8080"
-	@echo "    Agent: http://localhost:8001/healthz"
+	@echo "    Agent: http://localhost:8001/health"
 	@curl -s http://localhost:8001/tools | python3 -c \
 		"import json,sys; d=json.load(sys.stdin); \
 		 print('    Tools: ' + ', '.join(t['name'] for t in d['tools']))"
@@ -59,7 +59,7 @@ for m in outbox['messages']:
 
 check:
 	@echo "==> Healthz:"
-	@curl -s http://localhost:8001/healthz | python3 -m json.tool
+	@curl -s http://localhost:8001/health | python3 -m json.tool
 	@echo "==> Tools:"
 	@curl -s http://localhost:8001/tools | python3 -c \
 		"import json,sys; d=json.load(sys.stdin); \
