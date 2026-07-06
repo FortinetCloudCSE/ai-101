@@ -19,13 +19,13 @@
       "text": "FortiAIGate Workshop",
       "URL": "https://fortinetcloudcse.github.io/faig-training-workshop/",
       "icon": "fa-shield",
-      "weight": 20
+      "weight": 30
     },
     {
       "text": "Fortinet Cloud CSE",
       "URL": "https://github.com/FortinetCloudCSE",
       "icon": "fa-graduation-cap",
-      "weight": 30
+      "weight": 20
     },
     {
       "text": "MCP Specification",
@@ -36,13 +36,13 @@
     {
       "text": "OWASP LLM Top 10",
       "URL": "https://owasp.org/www-project-top-10-for-large-language-model-applications/",
-      "icon": "fa-list-ol",
+      "icon": "fa-book",
       "weight": 50
     },
     {
       "text": "OWASP MCP Top 10",
       "URL": "https://owasp.org/www-project-mcp-top-10/",
-      "icon": "fa-list-ol",
+      "icon": "fa-book",
       "weight": 60
     }
   ]
