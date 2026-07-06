@@ -32,6 +32,9 @@ cd ai-101
 
 ## 2. Install the chart for Lab 1
 
+Pre-built multi-arch images (amd64 + arm64) are published to GHCR and pulled
+automatically by the cluster — no manual image pull required.
+
 ```bash
 cd lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml

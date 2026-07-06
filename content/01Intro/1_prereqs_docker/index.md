@@ -27,13 +27,24 @@ git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
 ```
 
-## 2. Pull the model
+## 2. Pull the lab images
+
+Pre-built multi-arch images (amd64 + arm64) are published to GHCR. Pull them
+all up-front so the lab steps start instantly:
+
+```bash
+cd lab-app/compose
+docker compose --profile lab4 pull
+```
+
+`lab4` is the superset profile — pulling it once covers all four labs.
+
+## 3. Pull the model
 
 The first start downloads `qwen2.5:3b` (~2 GB). Do this now to avoid waiting
 during the lab:
 
 ```bash
-cd lab-app/compose
 docker compose --profile lab1 up -d
 docker compose logs -f ollama
 ```
@@ -42,7 +53,7 @@ Wait until you see a line containing `pull complete` or `success`. Then stop
 following the logs with `Ctrl+C`. The model is cached in the `ollama-data`
 Docker volume for all subsequent runs.
 
-## 3. Verify
+## 4. Verify
 
 ```bash
 curl -s http://localhost:11434/v1/chat/completions \
@@ -53,7 +64,7 @@ curl -s http://localhost:11434/v1/chat/completions \
 
 Expected: a short reply from the model (exact text varies).
 
-## 4. Reference — start/stop per lab
+## 5. Reference — start/stop per lab
 
 ```bash
 cd lab-app/compose
@@ -86,7 +97,7 @@ docker compose logs -f
 Leave the stack running as you work through the labs. Each lab section tells you which profile to switch to. Only stop the stack when you are completely done.
 {{% /notice %}}
 
-## 5. Cleanup (after the workshop)
+## 6. Cleanup (after the workshop)
 
 ```bash
 cd lab-app/compose
