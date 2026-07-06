@@ -10,6 +10,7 @@ weight: 2
 |-------------|---------|-------|
 | kubectl | 1.28+ | `kubectl version --client` |
 | Helm | 3.14+ | `helm version` |
+| jq | 1.6+ | `jq --version` |
 | A running cluster | — | `kubectl cluster-info` |
 | Default StorageClass | — | `kubectl get storageclass` |
 
@@ -31,6 +32,9 @@ cd ai-101
 ```
 
 ## 2. Install the chart for Lab 1
+
+Pre-built multi-arch images (amd64 + arm64) are published to GHCR and pulled
+automatically by the cluster — no manual image pull required.
 
 ```bash
 cd lab-app/helm
