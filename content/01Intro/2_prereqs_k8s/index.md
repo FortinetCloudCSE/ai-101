@@ -10,6 +10,7 @@ weight: 2
 |-------------|---------|-------|
 | kubectl | 1.28+ | `kubectl version --client` |
 | Helm | 3.14+ | `helm version` |
+| jq | 1.6+ | `jq --version` |
 | A running cluster | — | `kubectl cluster-info` |
 | Default StorageClass | — | `kubectl get storageclass` |
 

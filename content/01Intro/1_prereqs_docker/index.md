@@ -11,6 +11,7 @@ weight: 1
 | Docker Engine | 24+ | `docker version` |
 | Docker Compose | v2.20+ | `docker compose version` |
 | Git | any | `git --version` |
+| jq | 1.6+ | `jq --version` |
 | Free RAM | 8 GB | — |
 | Free disk | 5 GB | for model cache |
 
