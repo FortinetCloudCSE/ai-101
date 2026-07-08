@@ -95,14 +95,14 @@ async def lifespan(_app: FastAPI):
         _load_hardcoded()
     elif TOOL_MODE == "mcp":
         import asyncio
-        for attempt in range(10):
+        for attempt in range(30):
             try:
                 await _discover_mcp()
                 break
             except Exception as exc:
-                if attempt == 9:
+                if attempt == 29:
                     raise
-                wait = 2 ** attempt
+                wait = min(2 ** attempt, 5)
                 audit.emit({"event": "mcp_connect_retry", "attempt": attempt + 1,
                             "wait_s": wait, "error": str(exc)}, True)
                 await asyncio.sleep(wait)
