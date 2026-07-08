@@ -26,9 +26,12 @@ Expected: `ollama`, `agent`, and `ui` all running.
 cd lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
-kubectl port-forward svc/ai101-ui 8080:80 &
+kubectl port-forward svc/ai101-ui 8100:80 &
 kubectl port-forward svc/ai101-agent 8001:8001 &
 ```
+
+**Azure Cloud Shell users** — open the UI via Web Preview:
+click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 {{% /tab %}}
 {{< /tabs >}}
 
@@ -39,7 +42,7 @@ curl -s http://localhost:8001/health | jq .
 # Expected: "tool_mode": "hardcoded"
 ```
 
-Open the UI at [http://localhost:8080](http://localhost:8080).
+Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100) / Web Preview URL (Kubernetes).
 
 ---
 

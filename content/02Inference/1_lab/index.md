@@ -8,6 +8,13 @@ Ollama is already running from the setup step. You interact directly with the
 inference endpoint using two scripts in `lab-app/scripts/` — but read through
 the prompts below first so you know exactly what the model is being asked to do.
 
+{{% notice style="tip" title="Kubernetes users — check port-forward" %}}
+The lab scripts call `localhost:11434`. Make sure the Ollama port-forward from the setup step is still running in a separate terminal:
+```bash
+kubectl port-forward svc/ai101-ollama 11434:11434
+```
+{{% /notice %}}
+
 ## What the model is protecting
 
 Both scripts use this system prompt:

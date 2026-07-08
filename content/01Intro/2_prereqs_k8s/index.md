@@ -18,6 +18,14 @@ The Helm chart creates a PersistentVolumeClaim for Ollama's model cache. A
 default StorageClass is required unless you set `ollama.storage.storageClassName`
 explicitly.
 
+If your cluster has no default StorageClass (check with `kubectl get storageclass`),
+install [Rancher local-path-provisioner](https://github.com/rancher/local-path-provisioner) — it uses local node disk and works on any cluster:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/master/deploy/local-path-storage.yaml
+kubectl patch storageclass local-path -p '{"metadata":{"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+```
+
 {{% notice style="warning" title="Resource requirements" %}}
 Ollama needs at least 4 GB RAM on the node where it schedules. If your cluster
 nodes are smaller, set the `OLLAMA_MODEL` env var to a lighter model in
@@ -41,16 +49,25 @@ cd lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
 ```
 
-Wait for Ollama to finish pulling the model:
+Wait for the Ollama pod to start, then follow its logs to track the model download:
+```bash
+kubectl get pods -w
+```
+
+Once the `ai101-ollama-*` pod shows `Running` (may take 60–90 s for the image pull), open a new terminal and follow the logs:
 ```bash
 kubectl logs -l app.kubernetes.io/component=ollama -f
 ```
 
 ## 3. Verify
 
-Port-forward the Ollama service and test inference:
+First, port-forward the Ollama service in a separate terminal (or background it with `&`):
 ```bash
 kubectl port-forward svc/ai101-ollama 11434:11434 &
+```
+
+Then, in a new terminal, test inference:
+```bash
 curl -s http://localhost:11434/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{"model":"qwen2.5:3b","messages":[{"role":"user","content":"ping"}]}' \
@@ -75,11 +92,15 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 ```
 
-Access the UI:
+Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
 ```bash
-kubectl port-forward svc/ai101-ui 8080:80
+kubectl port-forward svc/ai101-ui 8100:80 &
 ```
-Then open [http://localhost:8080](http://localhost:8080).
+
+Then open [http://localhost:8100](http://localhost:8100) in a browser.
+
+**Azure Cloud Shell users** — `localhost` is not reachable from your browser. Use Web Preview instead:
+click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 
 {{% notice style="tip" title="Keep it running" %}}
 Leave the release running as you work through the labs. Each lab section tells you which values file to upgrade to. Only uninstall when you are completely done.

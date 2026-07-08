@@ -16,8 +16,8 @@
 
 image:
   registry: ghcr.io/fortinetcloudcse/ai-101
-  tag: v0.1.0
-  pullPolicy: IfNotPresent
+  tag: latest
+  pullPolicy: Always
 
 # ── Ollama ────────────────────────────────────────────────────────────────────
 ollama:

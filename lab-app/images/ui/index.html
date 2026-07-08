@@ -348,7 +348,7 @@
   // ── Health + status ───────────────────────────────────────────────────────
   async function checkHealth() {
     try {
-      const r = await fetch('/api/health');
+      const r = await fetch('api/health');
       const d = await r.json();
       document.getElementById('status-badge').textContent =
         `${d.tool_mode} · ${d.model}`;
@@ -364,7 +364,7 @@
 
   async function checkTransparency() {
     try {
-      const r = await fetch('/api/logs');
+      const r = await fetch('api/logs');
       const d = await r.json();
       const tb = document.getElementById('transparency-badge');
       tb.textContent = `transparency: ${d.transparency}`;
@@ -399,7 +399,7 @@
     loading.innerHTML = '<span class="spinner"></span>Thinking…';
 
     try {
-      const resp = await fetch('/api/chat', {
+      const resp = await fetch('api/chat', {
         method:  'POST',
         headers: {'Content-Type': 'application/json'},
         body:    JSON.stringify({message: text, session_id: sessionId}),
@@ -472,7 +472,7 @@
   // ── Audit log ─────────────────────────────────────────────────────────────
   async function refreshLogs() {
     try {
-      const r = await fetch('/api/logs');
+      const r = await fetch('api/logs');
       const d = await r.json();
       const container = document.getElementById('log-entries');
       container.innerHTML = '';
@@ -490,7 +490,7 @@
   // ── Outbox ────────────────────────────────────────────────────────────────
   async function refreshOutbox() {
     try {
-      const r = await fetch('/api/outbox');
+      const r = await fetch('api/outbox');
       const d = await r.json();
       const container = document.getElementById('outbox-entries');
       if (!d.messages || d.messages.length === 0) {
