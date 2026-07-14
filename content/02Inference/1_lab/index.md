@@ -9,7 +9,10 @@ inference endpoint using two scripts in `lab-app/scripts/` — but read through
 the prompts below first so you know exactly what the model is being asked to do.
 
 {{% notice style="tip" title="Kubernetes users — check port-forward" %}}
-The lab scripts call `localhost:11434`. Make sure the Ollama port-forward from the setup step is still running in a separate terminal:
+The lab scripts call `localhost:11434`. Make sure the Ollama port-forward from the setup step is still running in a separate terminal: 
+
+You can also confirm by running the command `jobs`
+
 ```bash
 kubectl port-forward svc/ai101-ollama 11434:11434
 ```
