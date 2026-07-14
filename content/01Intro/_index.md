@@ -25,7 +25,7 @@ the agent image, MCP server, and UI are identical.
 
 Pick the setup guide that matches your environment:
 
-- **[Docker Compose](./1_prereqs_docker)** — recommended for the workshop. Runs
+- **[Docker Compose](./1_prereqs_docker)** — recommended if you want to run on your own machine. Runs
   locally on any laptop with Docker Desktop or Docker Engine.
 - **[Kubernetes / Helm](./2_prereqs_k8s)** — for attendees who want to deploy
-  to a cluster. Requires Helm 3 and `kubectl`.
+  to a cluster and are continuing from K8s-101-workshop. Requires Helm 3 and `kubectl`.
