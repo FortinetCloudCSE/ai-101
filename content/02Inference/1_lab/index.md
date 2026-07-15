@@ -11,7 +11,7 @@ the prompts below first so you know exactly what the model is being asked to do.
 {{% notice style="tip" title="Kubernetes users — check port-forward" %}}
 The lab scripts call `localhost:11434`. Make sure the Ollama port-forward from the setup step is still running in a separate terminal: 
 
-You can also confirm by running the command `jobs`
+You can also confirm the background port-forward running the command `jobs` 
 
 ```bash
 kubectl port-forward svc/ai101-ollama 11434:11434
@@ -130,10 +130,20 @@ You should now be able to:
 - Explain structurally why prompt injection cannot be patched at the model level.
 - Reproduce the injection reliably and explain which prompt pattern it bypasses.
 
+{{< tabs >}}
+{{% tab title="Overrise code check" %}}
+
 ```bash
 ./lab-app/scripts/lab1_injection.sh | grep "Override code revealed"
-# Expected: Override code revealed: True
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```bash
+Override code revealed: True
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 {{% notice style="info" title="Optional: FortiAIGate extension" %}}
 If you are following this workshop alongside the

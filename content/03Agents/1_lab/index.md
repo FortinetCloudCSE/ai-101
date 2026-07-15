@@ -37,12 +37,25 @@ click the **Web Preview** icon (top-right toolbar) → **Configure** → port **
 
 Confirm the agent is up and in hardcoded mode:
 
+{{< tabs >}}
+{{% tab title="Agent Check" %}}
 ```bash
 curl -s http://localhost:8001/health | jq .
-# Expected: "tool_mode": "hardcoded"
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```bash
+{
+  "status": "ok",
+  "tool_mode": "hardcoded",
+  "model": "qwen2.5:3b",
+  "transparency": "verbose"
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
-Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100) / Web Preview URL (Kubernetes).
+Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100). For Cloudshell users open Web Preview to port 8100.
 
 ---
 
@@ -64,11 +77,20 @@ the loop executed it. The model never touched the database directly.
 
 Verify via the API:
 
+{{< tabs >}}
+{{% tab title="Verify"%}}
 ```bash
 curl -s http://localhost:8001/tools | jq '.tools[].name'
 ```
+{{% /tab %}}
 
-Expected: `"query_employees"` and `"send_message"`.
+{{% tab title="Expected Output" style="info" %}}
+```
+"query_employees"
+"send_message"
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 ---
 
@@ -80,12 +102,34 @@ This requires two tool calls the model cannot batch into one turn:
 1. `query_employees` to find Alice and her manager.
 2. `send_message` to notify the manager.
 
-Watch the Trace panel show both steps. Then confirm the outbox received the
-message:
+- Watch the Trace panel show both steps:
 
+ ![tracepanel](../../images/tracepanel.png)
+
+- Then confirm the outbox received the message:
+
+ ![outbox](../../images/outbox.png)
+
+- Now from the terminal run the following:
+
+{{< tabs >}}
+{{% tab title="Verify message received"%}}
 ```bash
 curl -s http://localhost:8001/outbox | jq '.messages'
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+[
+  {
+    "to": "Carol Singh",
+    "body": "Hi Carol, I wanted to inform you that Alice Chen will be 15 minutes late today. She mentioned it might be due to a last-minute client meeting."
+  }
+]
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 {{% notice style="tip" title="If the model narrates instead of acting" %}}
 Small models occasionally describe what they *would* do ("I would send a message
