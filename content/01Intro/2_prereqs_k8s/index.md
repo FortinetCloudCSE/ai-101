@@ -32,7 +32,7 @@ nodes are smaller, set the `OLLAMA_MODEL` env var to a lighter model in
 `values-lab1.yaml`.
 {{% /notice %}}
 
-## - Reconnect from Azure Cloud Shell
+## 1. Reconnect from Azure Cloud Shell
 
 ### - Verify Kubernetes access
 
@@ -119,7 +119,7 @@ ai101-ollama-8699cc758-sqrgt   1/1     Running   0          12m
 
 To open a new terminal in Azure Cloud Shell, click on the New Session tab
 
-![newsession](../../images/newsession.png)
+  ![newsession](../../images/newsession.png)
 {{% /tab %}}
 
 {{% tab title="Follow the logs" %}}
@@ -195,9 +195,9 @@ Then open [http://localhost:8100](http://localhost:8100) in a browser.
 **Azure Cloud Shell users** — `localhost` is not reachable from your browser. Use Web Preview instead:
 click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 
-![webeditor](../../images/webeditor.png)
+  ![webeditor](../../images/webeditor.png)
 
-![webeditor2](../../images/webeditor2.png)
+  ![webeditor2](../../images/webeditor2.png)
 
 {{% notice style="tip" title="Keep it running" %}}
 Leave the release running as you work through the labs. Each lab section tells you which values file to upgrade to. Only uninstall when you are completely done.
