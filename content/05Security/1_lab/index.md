@@ -220,7 +220,7 @@ curl -s -X POST http://localhost:8001/tools/refresh | jq .
 
 Inspect what the model now sees for `search_web`:
 
-{{% /tab %}}
+{{< tabs >}}
 {{% tab title="Search_Web %}}
 ```bash
 curl -s http://localhost:8001/tools | jq '.tools[] | select(.name=="search_web") | .description'
