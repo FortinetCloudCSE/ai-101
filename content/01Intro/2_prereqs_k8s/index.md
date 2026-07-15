@@ -119,7 +119,7 @@ ai101-ollama-8699cc758-sqrgt   1/1     Running   0          12m
 
 To open a new terminal in Azure Cloud Shell, click on the New Session tab
 
-  ![newsession](../../images/newsession.png)
+  ![newsession](./newsession.png)
 {{% /tab %}}
 
 {{% tab title="Follow the logs" %}}
