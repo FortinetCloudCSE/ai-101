@@ -104,11 +104,11 @@ This requires two tool calls the model cannot batch into one turn:
 
 - Watch the Trace panel show both steps:
 
- ![tracepanel](../../images/tracepanel.png)
+ ![tracepanel](./tracepanel.png)
 
 - Then confirm the outbox received the message:
 
- ![outbox](../../images/outbox.png)
+ ![outbox](./outbox.png)
 
 - Now from the terminal run the following:
 
@@ -129,6 +129,11 @@ curl -s http://localhost:8001/outbox | jq '.messages'
 ```
 {{% /tab %}}
 {{< /tabs >}}
+
+{{% notice style="warning" title="Output may vary" %}}
+LLM responses are non-deterministic, so exact wording and behavior can differ
+between runs — even with identical prompts and inputs.
+{{% /notice %}}
 
 
 {{% notice style="tip" title="If the model narrates instead of acting" %}}
@@ -210,10 +215,20 @@ You should now be able to:
 - Trigger a single tool call, a chained call, and a no-tool response.
 - Find the loop code and identify each branch.
 
+
+{{< tabs >}}
+{{% tab title="Verify"%}}
 ```bash
 curl -s http://localhost:8001/health | jq '.tool_mode'
-# Expected: "hardcoded"
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+"hardcoded"
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 {{% notice style="info" title="Optional: FortiAIGate extension" %}}
 FortiAIGate sits between the agent and the LLM and sees every request,

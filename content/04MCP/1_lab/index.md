@@ -33,6 +33,9 @@ curl -s http://localhost:8001/tools | jq '.tools[].name'
 cd lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
+```
+# only start if not already forwarded
+```bash
 kubectl port-forward svc/ai101-ui 8100:80 &
 kubectl port-forward svc/ai101-agent 8001:8001 &
 ```
@@ -56,9 +59,24 @@ server rather than as a direct function call in the same process.
 
 Check how the agent currently sees its tools:
 
+{{< tabs >}}
+{{% tab title="Check tools"%}}
 ```bash
 curl -s http://localhost:8001/tools | jq '{mode: .mode, tools: [.tools[].name]}'
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+{
+  "mode": "mcp",
+  "tools": [
+    "query_employees",
+    "send_message"
+  ]
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 ---
 
@@ -109,18 +127,59 @@ helm upgrade ai101 ./ai101 -f ai101/values-lab3.yaml \
     --set mcpServer.enableExtraTool=true
 ```
 {{% /tab %}}
+```
+{{% tab title="Expected Output" style="info" %}}
+Release "ai101" has been upgraded. Happy Helming!
+NAME: ai101
+LAST DEPLOYED: Wed Jul 15 19:13:24 2026
+NAMESPACE: default
+STATUS: deployed
+REVISION: 8
+DESCRIPTION: Upgrade complete
+TEST SUITE: None
+```
+{{% /tab %}}
 {{< /tabs >}}
 
-Only the MCP server was restarted. The agent container is still running with
+- Only the MCP server was restarted. The agent container is still running with
 its previous tool list. Trigger re-discovery without touching the agent:
 
+{{< tabs >}}
+{{% tab title="Discovery" %}}
 ```bash
 curl -s -X POST http://localhost:8001/tools/refresh | jq .
-# {"refreshed": true, "count": 3}
-
-curl -s http://localhost:8001/tools | jq '.tools[].name'
-# "query_employees", "send_message", "search_web"
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+{
+  "refreshed": true,
+  "count": 3
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
+- Check updated tools now
+
+{{< tabs >}}
+{{% tab title="Check updated tools" %}}
+
+```bash
+curl -s http://localhost:8001/tools | jq '.tools[].name'
+
+```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+{
+  "refreshed": true,
+  "count": 3
+}
+```
+{{% /tab %}}
+{{< /tabs >}}
+
 
 The agent now knows about `search_web`. The model can call it on the next
 request. No rebuild. No code change.
@@ -136,6 +195,8 @@ In the chat box:
 The Trace panel should show `search_web` being called. The result is stubbed
 (the server returns canned text), but the full discovery → schema registration
 → tool call → result flow is real.
+
+ ![searchweb](../searchweb.png)
 
 ---
 
@@ -157,10 +218,19 @@ You should now be able to:
 - Describe what changes between Lab 2 and Lab 3 (only the tool backend).
 - Add a tool to a running system and confirm the agent picks it up.
 
+{{< tabs >}}
+{{% tab title="Check Tools Length" %}}
 ```bash
 curl -s http://localhost:8001/tools | jq '.tools | length'
-# Expected: 3
+
 ```
+{{% /tab %}}
+{{% tab title="Expected Output" style="info" %}}
+```
+3
+```
+{{% /tab %}}
+{{< /tabs >}}
 
 {{% notice style="info" title="Optional: FortiAIGate extension" %}}
 When the agent routes through FortiAIGate, the gateway sees every MCP
