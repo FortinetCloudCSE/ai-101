@@ -195,6 +195,10 @@ Then open [http://localhost:8100](http://localhost:8100) in a browser.
 **Azure Cloud Shell users** — `localhost` is not reachable from your browser. Use Web Preview instead:
 click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 
+{{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
+The Azure Portal's embedded Cloud Shell can occasionally fail to authenticate its Web Preview proxy even when the port-forward is working. Leave this Cloud Shell tab open so the port-forward keeps running. In a new browser tab, open [shell.azure.com](https://shell.azure.com), then use **Web Preview** to close and reopen port **8100**. Related Cloud Shell proxy failures are documented in [Azure/CloudShell issue #368](https://github.com/Azure/CloudShell/issues/368) and [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/1500669/how-to-troubleshoot-web-preview-in-cloud-shell).
+{{% /notice %}}
+
   ![webeditor](./webeditor.png)
 
   ![webeditor2](./webeditor2.png)

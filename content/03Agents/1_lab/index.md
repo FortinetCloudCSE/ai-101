@@ -32,6 +32,10 @@ kubectl port-forward svc/ai101-agent 8001:8001 &
 
 **Azure Cloud Shell users** — open the UI via Web Preview:
 click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
+
+{{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
+The Azure Portal's embedded Cloud Shell can occasionally fail to authenticate its Web Preview proxy even when the port-forward is working. Leave this Cloud Shell tab open so the port-forward keeps running. In a new browser tab, open [shell.azure.com](https://shell.azure.com), then use **Web Preview** to close and reopen port **8100**. Related Cloud Shell proxy failures are documented in [Azure/CloudShell issue #368](https://github.com/Azure/CloudShell/issues/368) and [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/1500669/how-to-troubleshoot-web-preview-in-cloud-shell).
+{{% /notice %}}
 {{% /tab %}}
 {{< /tabs >}}
 
