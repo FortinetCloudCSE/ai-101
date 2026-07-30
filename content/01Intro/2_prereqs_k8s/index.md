@@ -18,6 +18,10 @@ The Helm chart creates a PersistentVolumeClaim for Ollama's model cache. A
 default StorageClass is required unless you set `ollama.storage.storageClassName`
 explicitly.
 
+{{% notice style="warning" title="Storage class" %}}
+If you are continuing from the Kubernetes 101 workshop, the storage class has already been created.
+{{% /notice %}}
+
 If your cluster has no default StorageClass (check with `kubectl get storageclass`),
 install [Rancher local-path-provisioner](https://github.com/rancher/local-path-provisioner) — it uses local node disk and works on any cluster:
 

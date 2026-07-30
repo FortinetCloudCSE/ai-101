@@ -26,8 +26,11 @@ Expected: `ollama`, `agent`, and `ui` all running.
 cd lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
-kubectl port-forward svc/ai101-ui 8100:80 &
 kubectl port-forward svc/ai101-agent 8001:8001 &
+```
+The port 8100 port-forwarding should be up and running. only run the following if your are unable to access the chatbot 
+```bash
+kubectl port-forward svc/ai101-ui 8100:80 &
 ```
 
 **Azure Cloud Shell users** — open the UI via Web Preview:
