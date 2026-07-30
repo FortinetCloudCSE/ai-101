@@ -99,12 +99,23 @@ jobs:
 
       - name: Build static app
         run: |
-         CONT_ID=$(docker run -d -v ${{github.workspace}}:/home/UserRepo "$LOCAL_IMAGE" build)
-         docker wait "$CONT_ID"
-         rm -rf ${{github.workspace}}/docs
-         docker cp $CONT_ID:/home/CentralRepo/public ${{github.workspace}}/docs
-         docker stop $CONT_ID
-         docker rm $CONT_ID
+          CONT_ID=$(docker run -d -v "${{ github.workspace }}:/home/UserRepo" "$LOCAL_IMAGE" build)
+
+          cleanup() {
+            docker rm -f "$CONT_ID" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          STATUS=$(docker wait "$CONT_ID")
+          docker logs "$CONT_ID"
+
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::Static site build failed with exit code $STATUS"
+            exit "$STATUS"
+          fi
+
+          rm -rf "${{ github.workspace }}/docs"
+          docker cp "$CONT_ID:/home/CentralRepo/public" "${{ github.workspace }}/docs"
 
       - name: Remove images
         run: docker rmi -f $(docker images "$IMAGE_REPO" -aq)

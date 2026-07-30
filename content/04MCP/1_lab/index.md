@@ -173,10 +173,9 @@ curl -s http://localhost:8001/tools | jq '.tools[].name'
 {{% /tab %}}
 {{% tab title="Expected Output" style="info" %}}
 ```
-{
-  "refreshed": true,
-  "count": 3
-}
+"query_employees"
+"send_message"
+"search_web"
 ```
 {{% /tab %}}
 {{< /tabs >}}
