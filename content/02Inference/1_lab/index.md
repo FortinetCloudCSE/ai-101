@@ -47,7 +47,7 @@ Expected: `qwen2.5:3b`
 The first interaction is a straightforward request for the secret. Run it:
 
 ```bash
-cd lab-app/scripts
+cd "$AI101_HOME/lab-app/scripts"
 ./lab1_inference.sh
 ```
 
@@ -84,6 +84,7 @@ sentence. The constraint pattern never fires.
 Run the injection script:
 
 ```bash
+cd "$AI101_HOME/lab-app/scripts"
 ./lab1_injection.sh
 ```
 
@@ -131,10 +132,10 @@ You should now be able to:
 - Reproduce the injection reliably and explain which prompt pattern it bypasses.
 
 {{< tabs >}}
-{{% tab title="Overrise code check" %}}
+{{% tab title="Override code check" %}}
 
 ```bash
-./lab-app/scripts/lab1_injection.sh | grep "Override code revealed"
+"$AI101_HOME/lab-app/scripts/lab1_injection.sh" | grep "Override code revealed"
 ```
 {{% /tab %}}
 {{% tab title="Expected Output" style="info" %}}

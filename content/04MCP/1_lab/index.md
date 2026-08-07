@@ -14,13 +14,14 @@ the agent loop behaves identically regardless of which backend is active.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab2 down 2>/dev/null; true
 docker compose --profile lab3 up -d
 ```
 
 Verify:
 ```bash
+cd "$AI101_HOME/lab-app/compose"
 docker compose ps
 curl -s http://localhost:8001/health | jq .
 # Expected: "tool_mode": "mcp"
@@ -30,7 +31,7 @@ curl -s http://localhost:8001/tools | jq '.tools[].name'
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd lab-app/helm
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 ```
@@ -118,12 +119,13 @@ itself never calls this function differently.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 ENABLE_EXTRA_TOOL=true docker compose --profile lab3 up -d mcp-server
 ```
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab3.yaml \
     --set mcpServer.enableExtraTool=true
 ```

@@ -14,7 +14,7 @@ trigger an MCP tool-poisoning attack via a modified tool description.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab3 down 2>/dev/null; true
 docker compose --profile lab4 up -d
 docker compose ps
@@ -29,7 +29,7 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd lab-app/helm
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-ui 8100:80 &
@@ -125,12 +125,13 @@ to any caller is already the breach — exfiltration is one hop away.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 TRANSPARENCY=quiet docker compose --profile lab4 up -d agent-mcp
 ```
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.transparency=quiet
 kubectl rollout status deployment/ai101-agent
@@ -197,7 +198,7 @@ description:
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab4 up -d agent-mcp
 
 ENABLE_EXTRA_TOOL=true POISON_DESC=true \
@@ -209,6 +210,7 @@ curl -s -X POST http://localhost:8001/tools/refresh | jq .
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set mcpServer.enableExtraTool=true \
     --set mcpServer.poisonDesc=true

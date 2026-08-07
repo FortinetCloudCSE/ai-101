@@ -71,6 +71,7 @@ kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
 cd ~
 git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
+AI101_HOME=$(pwd)
 ```
 
 ## - Install the chart for Lab 1
@@ -81,7 +82,7 @@ automatically by the cluster — no manual image pull required.
 {{< tabs >}}
 {{% tab title="Install Chart" %}}
 ```bash
-cd lab-app/helm
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
 ```
 {{% /tab %}}
@@ -124,6 +125,18 @@ ai101-ollama-8699cc758-sqrgt   1/1     Running   0          12m
 To open a new terminal in Azure Cloud Shell, click on the New Session tab
 
   ![newsession](./newsession.png)
+
+A new session does not inherit `AI101_HOME`. Print it in your current terminal:
+
+```bash
+echo $AI101_HOME
+```
+
+Then paste the path into the new session:
+
+```bash
+AI101_HOME=<paste the path here>
+```
 {{% /tab %}}
 
 {{% tab title="Follow the logs" %}}
@@ -174,7 +187,7 @@ The `kubectl port-forward` command creates a temporary connection from `localhos
 ## - Reference — upgrade per lab
 
 ```bash
-cd lab-app/helm
+cd "$AI101_HOME/lab-app/helm"
 
 # Lab 1 — Ollama only
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
@@ -220,6 +233,7 @@ The two sections below are **not part of the lab flow** — they are reference m
 To route the agent through FortiAIGate instead of the local Ollama:
 
 ```bash
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.openaiBaseUrl=https://your-fortiaigate-host/v1
 ```

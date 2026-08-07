@@ -14,7 +14,7 @@ describes.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab1 down 2>/dev/null; true
 docker compose --profile lab2 up -d
 docker compose ps
@@ -23,7 +23,7 @@ Expected: `ollama`, `agent`, and `ui` all running.
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd lab-app/helm
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 &

@@ -26,6 +26,7 @@ responses will just be slower.
 ```bash
 git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
+AI101_HOME=$(pwd)
 ```
 
 ## 2. Pull the lab images
@@ -34,7 +35,7 @@ Pre-built multi-arch images (amd64 + arm64) are published to GHCR. Pull them
 all up-front so the lab steps start instantly:
 
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab4 pull
 ```
 
@@ -46,6 +47,7 @@ The first start downloads `qwen2.5:3b` (~2 GB). Do this now to avoid waiting
 during the lab:
 
 ```bash
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab1 up -d
 docker compose logs -f ollama
 ```
@@ -68,7 +70,7 @@ Expected: a short reply from the model (exact text varies).
 ## 5. Reference — start/stop per lab
 
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 
 # Lab 1 — Ollama only
 docker compose --profile lab1 up -d
@@ -86,11 +88,13 @@ docker compose --profile lab4 up -d
 
 To check running services:
 ```bash
+cd "$AI101_HOME/lab-app/compose"
 docker compose ps
 ```
 
 To tail all logs:
 ```bash
+cd "$AI101_HOME/lab-app/compose"
 docker compose logs -f
 ```
 
@@ -101,7 +105,7 @@ Leave the stack running as you work through the labs. Each lab section tells you
 ## 6. Cleanup (after the workshop)
 
 ```bash
-cd lab-app/compose
+cd "$AI101_HOME/lab-app/compose"
 docker compose --profile lab4 down
 docker volume rm compose_ollama-data
 ```
