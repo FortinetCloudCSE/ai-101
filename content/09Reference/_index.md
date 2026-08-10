@@ -79,6 +79,10 @@ to Day 1.
 
 ## Known issues and workarounds
 
+### Azure Cloud Shell Web Preview returns Unauthorized
+
+See [Troubleshooting Azure Cloud Shell Web Preview](cloud-shell-web-preview/).
+
 ### First token takes 30+ seconds
 
 The model is loading. Expected on CPU inference with no GPU. If the request

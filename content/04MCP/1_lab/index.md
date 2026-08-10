@@ -38,8 +38,8 @@ kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 ### only start if not already forwarded
 
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 &
-kubectl port-forward svc/ai101-agent 8001:8001 &
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
 
 **Azure Cloud Shell users** — open the UI via Web Preview:

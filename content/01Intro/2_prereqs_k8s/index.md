@@ -163,7 +163,7 @@ First, port-forward the Ollama service so Cloud Shell can reach the Ollama API r
 {{< tabs >}}
 {{% tab title="Port Forward" %}}
 ```bash
-kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/port-forward.log 2>&1 &
+kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/ai101-ollama-port-forward.log 2>&1 < /dev/null &
 ```
 
 Then, in a new terminal or current terminal, send a test prompt to the Ollama OpenAI-compatible API endpoint:
@@ -204,7 +204,7 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 
 Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ui-pf.log 2>&1 &
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
 ```
 
 Then open [http://localhost:8100](http://localhost:8100) in a browser.
@@ -213,7 +213,7 @@ Then open [http://localhost:8100](http://localhost:8100) in a browser.
 click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 
 {{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
-The Azure Portal's embedded Cloud Shell can occasionally fail to authenticate its Web Preview proxy even when the port-forward is working. Leave this Cloud Shell tab open so the port-forward keeps running. In a new browser tab, open [shell.azure.com](https://shell.azure.com), then use **Web Preview** to close and reopen port **8100**. Related Cloud Shell proxy failures are documented in [Azure/CloudShell issue #368](https://github.com/Azure/CloudShell/issues/368) and [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/1500669/how-to-troubleshoot-web-preview-in-cloud-shell).
+See [Troubleshooting Azure Cloud Shell Web Preview](../../09Reference/cloud-shell-web-preview/).
 {{% /notice %}}
 
   ![webeditor](./webeditor.png)

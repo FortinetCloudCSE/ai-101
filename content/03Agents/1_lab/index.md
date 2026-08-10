@@ -26,18 +26,18 @@ Expected: `ollama`, `agent`, and `ui` all running.
 cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
-kubectl port-forward svc/ai101-agent 8001:8001 &
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
-The port 8100 port-forwarding should be up and running. only run the following if your are unable to access the chatbot 
+The port 8100 port-forward should already be running. If you cannot access the chatbot, start it again:
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 &
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
 ```
 
 **Azure Cloud Shell users** — open the UI via Web Preview:
 click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
 
 {{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
-The Azure Portal's embedded Cloud Shell can occasionally fail to authenticate its Web Preview proxy even when the port-forward is working. Leave this Cloud Shell tab open so the port-forward keeps running. In a new browser tab, open [shell.azure.com](https://shell.azure.com), then use **Web Preview** to close and reopen port **8100**. Related Cloud Shell proxy failures are documented in [Azure/CloudShell issue #368](https://github.com/Azure/CloudShell/issues/368) and [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/1500669/how-to-troubleshoot-web-preview-in-cloud-shell).
+See [Troubleshooting Azure Cloud Shell Web Preview](../../09Reference/cloud-shell-web-preview/).
 {{% /notice %}}
 {{% /tab %}}
 {{< /tabs >}}

@@ -32,8 +32,8 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
-kubectl port-forward svc/ai101-ui 8100:80 &
-kubectl port-forward svc/ai101-agent 8001:8001 &
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
 
 **Azure Cloud Shell users** — open the UI via Web Preview:
@@ -141,7 +141,11 @@ kubectl rollout status deployment/ai101-agent
 
 Wait for the agent to be ready before reloading the UI. 
 
-- If you dont see any response, run port-forwarding again: ```kubectl port-forward svc/ai101-agent 8001:8001 &```
+If you don't see a response, start the agent port-forward again:
+
+```bash
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+```
 
 {{< tabs >}}
 {{% tab title="Check Transparency" %}}
