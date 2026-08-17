@@ -14,7 +14,7 @@ trigger an MCP tool-poisoning attack via a modified tool description.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd "$AI101_HOME/lab-app/compose"
+cd "~/ai-101/lab-app/compose"
 docker compose --profile lab3 down 2>/dev/null; true
 docker compose --profile lab4 up -d
 docker compose ps
@@ -29,15 +29,13 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd "~/ai-101/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280
 ```
-
-**Azure Cloud Shell users** — open the UI via Web Preview:
-click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
+Click the printed link to open the chatbot UI directly.
 {{% /tab %}}
 {{< /tabs >}}
 
@@ -125,13 +123,13 @@ to any caller is already the breach — exfiltration is one hop away.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd "$AI101_HOME/lab-app/compose"
+cd "~/ai-101/lab-app/compose"
 TRANSPARENCY=quiet docker compose --profile lab4 up -d agent-mcp
 ```
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd "~/ai-101/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.transparency=quiet
 kubectl rollout status deployment/ai101-agent
@@ -202,7 +200,7 @@ description:
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd "$AI101_HOME/lab-app/compose"
+cd "~/ai-101/lab-app/compose"
 docker compose --profile lab4 up -d agent-mcp
 
 ENABLE_EXTRA_TOOL=true POISON_DESC=true \
@@ -214,7 +212,7 @@ curl -s -X POST http://localhost:8001/tools/refresh | jq .
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd "~/ai-101/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set mcpServer.enableExtraTool=true \
     --set mcpServer.poisonDesc=true

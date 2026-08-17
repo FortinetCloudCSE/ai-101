@@ -126,16 +126,11 @@ To open a new terminal in Azure Cloud Shell, click on the New Session tab
 
   ![newsession](./newsession.png)
 
-A new session does not inherit `AI101_HOME`. Print it in your current terminal:
+
+In the session lab paste the below: 
 
 ```bash
-echo $AI101_HOME
-```
-
-Then paste the path into the new session:
-
-```bash
-AI101_HOME=<paste the path here>
+cd ~/ai-101/lab-app/helm
 ```
 {{% /tab %}}
 
@@ -187,7 +182,7 @@ The `kubectl port-forward` command creates a temporary connection from `localhos
 ## - Reference — upgrade per lab
 
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd "~/ai-101/lab-app/helm"
 
 # Lab 1 — Ollama only
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
@@ -204,21 +199,12 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 
 Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
 ```
 
-Then open [http://localhost:8100](http://localhost:8100) in a browser.
+Click the printed link to open the chatbot UI in your browser.
 
-**Azure Cloud Shell users** — `localhost` is not reachable from your browser. Use Web Preview instead:
-click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
-
-{{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
-See [Troubleshooting Azure Cloud Shell Web Preview](../../09Reference/cloud-shell-web-preview/).
-{{% /notice %}}
-
-  ![webeditor](./webeditor.png)
-
-  ![webeditor2](./webeditor2.png)
+  ![chatbotui](./browser.png.png)
 
 {{% notice style="tip" title="Keep it running" %}}
 Leave the release running as you work through the labs. Each lab section tells you which values file to upgrade to. Only uninstall when you are completely done.
@@ -233,7 +219,7 @@ The two sections below are **not part of the lab flow** — they are reference m
 To route the agent through FortiAIGate instead of the local Ollama:
 
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd "~/ai-101/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.openaiBaseUrl=https://your-fortiaigate-host/v1
 ```
