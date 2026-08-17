@@ -2,9 +2,12 @@
 Date: 2026-08-17
 Owner: Jeff Kopko
 Slug: workshop-deployment-path-lock
-Plan File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
-Log File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.log.md
-Spec File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
+Status: Complete
+Supersedes: none
+Superseded-By: none
+Plan File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
+Log File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.log.md
+Spec File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
 
 ## Goal
 
@@ -14,7 +17,7 @@ workshop shows only that path — persistently, visibly, and verifiably. Applies
 
 ## Context / Links
 
-- Spec: `plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md`
+- Spec: `plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md`
 - Theme: `hugo-theme-relearn` (inside `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest`,
   mounted at `/home/CentralRepo`)
 - Relearn tabs docs: `CentralRepo/themes/hugo-theme-relearn/docs/content/shortcodes/tabs.en.md`
@@ -434,7 +437,9 @@ restoring — `HEAD` lints clean at 14 pages.
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster
 - [ ] Add `pageRef` support to `menu.shortcuts` in `CentralRepo/scripts/templates/hugo.jinja`
       so a workshop repo can put an internal page in the sidebar shortcuts without a WARN
-- [ ] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session
+- [x] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session; merged there
+      via PR #104 on 2026-08-17. `PATH_TITLE_RE` is deliberately disabled in that repo (its
+      pattern matches two ordinary existing tab titles), with a do-not-re-enable note.
 - [x] **Flatten non-path tab groups in the handouts too — done 2026-08-17.** Found during
       post-merge verification of the PDFs: the generator flattened `pathtabs` correctly but
       left the remaining tab groups as tabs, and relearn's print CSS renders only the
@@ -447,9 +452,22 @@ restoring — `HEAD` lints clean at 14 pages.
       five levels after `demote_headings`, and these labels do not belong in the TOC.
       Verified: 0 tab groups and 0 hidden panels in both print HTML files, PDFs grew 22→23
       and 26→28 pages, and "Follow the logs" plus every expected-output block is on paper.
-- [ ] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
+- [x] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
       handouts live in the reference section only makes a sidebar shortcut unwanted, so the
-      `pageRef` limitation blocks nothing.
+      `pageRef` limitation blocks nothing. Closed as not-needed 2026-08-17.
+- [x] **Merged and published 2026-08-17.** `ai-101` PR #16 and `k8s-101-workshop` PR #104
+      both merged to `main`; Pages deploy and the Handout-PDF workflow ran green on both, and
+      the published pages were spot-checked over HTTP (200s, correct rewritten hrefs). Worth
+      recording for the next reader: while #16 was open, `main` moved (Robert's
+      `08acc34 fix helm chart values.yaml ui settings`, adding a `NodePort 30280` UI service
+      to `values-lab3/4.yaml`). Merged forward, rebuilt (42 pages, 0 WARN), and confirmed the
+      change makes the chart *match* content that already documented NodePort 30280 — so the
+      Lab 3/4 k8s instructions were correct before the chart was.
+- [ ] `errorignore` as the cheaper alternative to `pageRef` upstream: relearn's
+      `urlErrorReport.gotmpl` already honors `site.Params.errorignore` (a list of regexes
+      matched against the URL). `hugo.jinja` emits neither it nor `pageRef`, and has no
+      arbitrary-params passthrough, so either one is an upstream CentralRepo change — but
+      `errorignore` is a one-line template addition where `pageRef` needs menu-shape changes.
 
 ## Risks / Open Questions
 
