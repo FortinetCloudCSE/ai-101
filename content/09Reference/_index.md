@@ -12,6 +12,7 @@ weight: 90
 
 | Page / section | What it covers |
 |---|---|
+| [Printable handout](handouts/handout-docker/) | Every Docker Compose step in one linear page, for printing |
 | [Docker Compose Setup](/01Intro/1_prereqs_docker) | Install, image pull, model pull, start/stop per lab, cleanup |
 | [Compose profiles](#compose-profiles) | Which services each `--profile labN` brings up |
 | [Environment variables](#environment-variables) | Every variable the lab app reads |
@@ -25,6 +26,7 @@ There is no Azure Cloud Shell page for this path — the UI runs on your own mac
 
 | Page / section | What it covers |
 |---|---|
+| [Printable handout](handouts/handout-k8s/) | Every Kubernetes / Helm step in one linear page, for printing |
 | [Kubernetes / Helm Setup](/01Intro/2_prereqs_k8s) | Cluster reconnect, chart install, port-forward, upgrade per lab, cleanup |
 | [Troubleshooting Azure Cloud Shell Web Preview](cloud-shell-web-preview/) | `Unauthorized` on Web Preview, per browser |
 | [Environment variables](#environment-variables) | Every variable the lab app reads |
