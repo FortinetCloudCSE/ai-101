@@ -44,7 +44,7 @@ nodes are smaller, set the `OLLAMA_MODEL` env var to a lighter model in
 
 ## 1. Reconnect from Azure Cloud Shell
 
-### - Verify Kubernetes access
+### Verify Kubernetes access
 
 ```bash
 kubectl config current-context
@@ -52,7 +52,7 @@ kubectl get nodes
 ```
 If kubectl get nodes works, you are connected to the cluster and continue to the Clone the repo step. 
 
-### - Run ONLY If access is lost
+### Run ONLY if access is lost
 
 refresh the kubeconfig from the K8s 101 master node
 
@@ -71,7 +71,7 @@ kubectl get nodes
 kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
 ```
 
-## - Clone the repo
+## 2. Clone the repo
 
 ```bash
 cd ~
@@ -80,7 +80,7 @@ cd ai-101
 AI101_HOME=$(pwd)
 ```
 
-## - Install the chart for Lab 1
+## 3. Install the chart for Lab 1
 
 - Pre-built multi-arch images (amd64 + arm64) are published to GHCR and pulled
 automatically by the cluster — no manual image pull required.
@@ -157,7 +157,7 @@ kubectl logs -l app.kubernetes.io/component=ollama -f
 {{% /tab %}}
 {{< /tabs >}}
 
-## - Verify
+## 4. Verify
 
 First, port-forward the Ollama service so Cloud Shell can reach the Ollama API running inside the Kubernetes cluster (or background it with `&`):
 
@@ -185,7 +185,7 @@ Pong! Your request was "ping", and my response is "Pong". I hope that answered y
 
 The `kubectl port-forward` command creates a temporary connection from `localhost:11434` in Azure Cloud Shell to the Ollama service running inside the Kubernetes cluster. The `curl` command then sends a small test prompt to that local endpoint. Kubernetes forwards the request to Ollama, Ollama runs the model, and the model response is returned back to Cloud Shell.
 
-## - Reference — upgrade per lab
+## 5. Reference — upgrade per lab
 
 ```bash
 cd ~/ai-101/lab-app/helm
@@ -220,7 +220,7 @@ Leave the release running as you work through the labs. Each lab section tells y
 
 The two sections below are **not part of the lab flow** — they are reference material for optional extensions and post-workshop teardown.
 
-## - Optional — FortiAIGate routing
+## 6. Optional — FortiAIGate routing
 
 To route the agent through FortiAIGate instead of the local Ollama:
 
@@ -233,7 +233,7 @@ helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
 See the [FortiAIGate Workshop](https://fortinetcloudcse.github.io/faig-training-workshop/)
 for policy configuration details.
 
-## - Cleanup (after the workshop)
+## 7. Cleanup (after the workshop)
 
 ```bash
 helm uninstall ai101
