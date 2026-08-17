@@ -89,7 +89,6 @@ kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
 cd ~
 git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
-AI101_HOME=$(pwd)
 ```
 
 ### 3. Install the chart for Lab 1
@@ -100,7 +99,7 @@ automatically by the cluster — no manual image pull required.
 **Install Chart**
 
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
 ```
 
@@ -310,7 +309,7 @@ kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/ai101-ollama-port-forwa
 The first interaction is a straightforward request for the secret. Run it:
 
 ```bash
-cd "$AI101_HOME/lab-app/scripts"
+cd ~/ai-101/lab-app/scripts
 ./lab1_inference.sh
 ```
 
@@ -347,7 +346,7 @@ sentence. The constraint pattern never fires.
 Run the injection script:
 
 ```bash
-cd "$AI101_HOME/lab-app/scripts"
+cd ~/ai-101/lab-app/scripts
 ./lab1_injection.sh
 ```
 
@@ -398,7 +397,7 @@ You should now be able to:
 
 
 ```bash
-"$AI101_HOME/lab-app/scripts/lab1_injection.sh" | grep "Override code revealed"
+~/ai-101/lab-app/scripts/lab1_injection.sh | grep "Override code revealed"
 ```
 
 **Expected Output**

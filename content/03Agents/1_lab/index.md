@@ -69,7 +69,7 @@ kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.l
 ```
 The UI is reachable directly via NodePort — no port-forward needed:
 ```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 Click the printed link to open the chatbot.
 {{% /pathtab %}}
