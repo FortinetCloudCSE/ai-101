@@ -214,10 +214,11 @@ from `jkopkoEdits`.
       names the file — protection does not depend on the linter
 - [x] Verify `outputs: ["html","print"]` in page front matter produces
       `zztmptest/index.print.html` with this image — **Phase 3 unblocked**
-- [ ] Jeff previews in a browser and signs off on the UX before Phase 1
-      (`fortihugorunner launch-server`: click Kubernetes on the gate, confirm Lab 2 shows
-      Kubernetes on load and after a hard reload, and that the page is still followable
-      with JavaScript disabled)
+- [x] Jeff previews in a browser and signs off on the UX before Phase 1 — **approved
+      2026-08-17**. He clicked Kubernetes / Helm on the gate, followed the tab's link to
+      `01intro/2_prereqs_k8s.html`, and confirmed all three `deploy-path` groups on
+      `03agents/1_lab.html` were synced to Kubernetes / Helm. Ticked after the branch
+      merged, to avoid a conflict with the worktree session editing this file.
 
 ### Phase 1 — Convert remaining ai-101 content
 - [x] `content/02Inference/1_lab/index.md` (no tabs today)
@@ -434,6 +435,18 @@ restoring — `HEAD` lints clean at 14 pages.
 - [ ] Add `pageRef` support to `menu.shortcuts` in `CentralRepo/scripts/templates/hugo.jinja`
       so a workshop repo can put an internal page in the sidebar shortcuts without a WARN
 - [ ] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session
+- [ ] **Flatten non-path tab groups in the handouts too.** Found during post-merge
+      verification of the PDFs: the generator flattens `pathtabs` correctly, but leaves the
+      remaining tab groups as tabs — and relearn's print CSS renders only the *active*
+      (first) tab, so every second/third panel is missing from the PDF. Measured on the
+      committed handouts: `handout-docker` hides 12 panels, `handout-k8s` hides 17. Sixteen
+      of those are "Expected Output"/"Example Output" (students cannot check their work on
+      paper) and one is a genuine instruction — the "Follow the logs" tab in the k8s
+      three-tab group. Fix: since a handout is a linear document, emit each non-path tab as
+      a labelled subsection rather than a tab. Cheap, contained to `gen_handouts.py`.
+- [ ] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
+      handouts live in the reference section only makes a sidebar shortcut unwanted, so the
+      `pageRef` limitation blocks nothing.
 
 ## Risks / Open Questions
 
