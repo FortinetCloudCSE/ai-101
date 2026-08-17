@@ -77,7 +77,6 @@ kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
 cd ~
 git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
-AI101_HOME=$(pwd)
 ```
 
 ## 3. Install the chart for Lab 1
@@ -88,7 +87,7 @@ automatically by the cluster — no manual image pull required.
 {{< tabs >}}
 {{% tab title="Install Chart" %}}
 ```bash
-cd "$AI101_HOME/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
 ```
 {{% /tab %}}
@@ -205,7 +204,7 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 
 Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
 ```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 
 Click the printed link to open the chatbot UI in your browser.
