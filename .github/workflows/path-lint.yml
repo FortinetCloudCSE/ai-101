@@ -1,0 +1,28 @@
+# Guards the deployment-path invariant: every path-specific instruction lives
+# inside a pathtabs block, and the generated handouts match their source pages.
+#
+# Separate from static.yml on purpose — that file is in the repo template's
+# FILES_TO_COPY, so anything added there is reverted by the next template upgrade.
+name: Path lint
+
+on:
+  pull_request:
+    paths:
+      - "content/**"
+      - "layouts/shortcodes/pathtab*.html"
+      - "scripts/gen_handouts.py"
+      - "scripts/lint_paths.py"
+      - ".github/workflows/path-lint.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint deployment paths
+        run: python3 scripts/lint_paths.py

@@ -220,36 +220,45 @@ from `jkopkoEdits`.
       with JavaScript disabled)
 
 ### Phase 1 — Convert remaining ai-101 content
-- [ ] `content/02Inference/1_lab/index.md` (no tabs today)
-- [ ] `content/04MCP/1_lab/index.md` (2 tab pairs + inline URLs)
-- [ ] `content/05Security/1_lab/index.md` (3 tab pairs + inline URLs + prose recovery step)
-- [ ] Badge + preflight block on all four lab pages
-- [ ] Sweep for any remaining unbranched path token; fix
-- [ ] Fix the two pre-existing broken images while in these files
+- [x] `content/02Inference/1_lab/index.md` (no tabs today)
+- [x] `content/04MCP/1_lab/index.md` (2 tab pairs + inline URLs)
+- [x] `content/05Security/1_lab/index.md` (3 tab pairs + inline URLs + prose recovery step)
+- [x] Badge + preflight block on all four lab pages
+- [x] Sweep for any remaining unbranched path token; fix
+- [x] Fix the two pre-existing broken images while in these files
       (`01Intro/2_prereqs_k8s/index.md:207` doubled extension,
       `04MCP/1_lab/index.md:199` out-of-bundle path) — both currently ship broken
-- [ ] Verify: full build, zero `is not a resource` WARNs, all four labs path-locked
+- [x] Verify: full build, zero `is not a resource` WARNs, all four labs path-locked
 
 ### Phase 2 — Path-scoped troubleshooting
-- [ ] Mark `09Reference/cloud-shell-web-preview` as Kubernetes-only
-- [ ] Rebuild `09Reference/_index.md` as a path-scoped index
+- [x] Mark `09Reference/cloud-shell-web-preview` as Kubernetes-only
+- [x] Rebuild `09Reference/_index.md` as a path-scoped index
 
 ### Phase 3 — Handouts + PDF
-- [ ] `scripts/gen_handouts.py` with `--check`
-- [ ] Generate and commit both handout pages
-- [ ] `.github/workflows/handout-pdf.yml`
-- [ ] Link handout PDFs from `scripts/repoConfig.json` shortcuts
-- [ ] Verify: each handout contains only its own path's commands; print view renders;
+- [x] `scripts/gen_handouts.py` with `--check`
+- [x] Generate and commit both handout pages
+- [x] `.github/workflows/handout-pdf.yml`
+- [ ] **Not done — not achievable without a permanent WARN.** Link handout PDFs from
+      `scripts/repoConfig.json` shortcuts. `hugo.jinja` emits only `url =` for shortcuts,
+      never `pageRef`, and relearn's `menuPermalink.gotmpl` runs the value through
+      `relLangURL`, which strips the baseURL off a fully-qualified self-URL — so the
+      result is classified "local" and warns on every page (verified: 2 WARNs, reverted).
+      Handouts are instead linked from each path's table in `09Reference/_index.md`.
+      Follow-up: add `pageRef` support to `hugo.jinja` upstream.
+- [x] Verify: each handout contains only its own path's commands; print view renders;
       PDF artifact downloads and is readable
 
 ### Phase 4 — Enforcement + docs (ai-101)
-- [ ] `scripts/lint_paths.py`
-- [ ] `.github/workflows/path-lint.yml`
-- [ ] Prove the linter fails on a deliberately broken branch, then passes on `HEAD`
-- [ ] `CLAUDE.md` + `README.md` updates
-- [ ] `RELEASE_NOTES.md` entry if the repo adopts one (it currently has none)
+- [x] `scripts/lint_paths.py`
+- [x] `.github/workflows/path-lint.yml`
+- [x] Prove the linter fails on a deliberately broken branch, then passes on `HEAD`
+- [x] `CLAUDE.md` + `README.md` updates
+- [ ] N/A — `RELEASE_NOTES.md` entry if the repo adopts one (it still has none)
 
 ### Phase 5 — k8s-101-workshop prevention
+
+**Out of scope for this session** — handled by a separate session, by instruction.
+
 - [ ] Copy `scripts/lint_paths.py` with an empty path vocabulary
 - [ ] Add `.github/workflows/path-lint.yml`
 - [ ] Document the convention in `k8s-101-workshop/CLAUDE.md`
@@ -318,12 +327,95 @@ Phase 0:
 - `content/03Agents/1_lab/index.md` — badge + preflight block added; Deploy tabs and the
   UI-URL parenthetical converted to `pathtabs`; two `cd "~/…"` commands fixed
 
+Phase 1 — `8adc164`:
+- `content/02Inference/1_lab/index.md` — Kubernetes-only `notice` replaced by a badge +
+  preflight `pathtabs` block; Step 1's verify `curl` wrapped with per-path recovery advice
+- `content/04MCP/1_lab/index.md` — badge + preflight; Deploy tabs, the inline UI-URL
+  parenthetical, and Step 3's three-way group converted to `pathtabs`; 4 `cd "~` fixed;
+  `../searchweb.png` → bundle resource; unterminated `echo "UI: …` quote fixed
+- `content/04MCP/searchweb.png` → `content/04MCP/1_lab/searchweb.png` (`git mv`) so it is
+  a real page resource of the bundle that references it
+- `content/05Security/1_lab/index.md` — badge + preflight; 3 tab pairs + the inline URL
+  converted; the Kubernetes-only port-forward recovery step moved out of unbranched prose
+  into the path block, with the reason it dies (`helm upgrade` replaces the agent pod);
+  6 `cd "~` fixed; unterminated `echo` quote fixed
+- `content/01Intro/1_prereqs_docker/index.md`, `content/01Intro/2_prereqs_k8s/index.md` —
+  `deploymentPath` front matter + an opening notice linking the other path;
+  `browser.png.png` → `browser.png`; 2 `cd "~` fixed
+- `content/03Agents/_index.md` — path tokens removed from conceptual prose rather than
+  allowlisted ("Lab 2 gives the URL for your deployment path")
+
+Phase 2 — `80baf28`:
+- `content/09Reference/cloud-shell-web-preview/index.md` — `deploymentPath: k8s` + notice
+- `content/09Reference/_index.md` — per-path reference index; Day-2 swap converted to
+  `pathtabs`; new `### Path-specific issues` block absorbing the two path-specific
+  troubleshooting entries; endpoint table de-pathed to `http://<ollama-host>:11434/v1`
+
+Phase 3 — `ece618c`:
+- `scripts/gen_handouts.py` (new, 508 lines) — walks `content/` in weight order, flattens
+  each `pathtabs` block to one path, copies bundle images into the handout bundle under a
+  `<dir-slug>-<name>.png` prefix, rewrites page links to `/`-rooted content refs, and owns
+  `OUT_DIR` outright (orphans deleted). `--check` is the CI freshness gate.
+- `content/09Reference/handouts/` (generated) — `_index.md` + two bundles (1143 and 1446
+  line pages, 8 copied PNGs), `hidden: true`, `outputs: ["html", "print"]`
+- `content/09Reference/_index.md` — a handout row per path's reference table
+- `.github/workflows/handout-pdf.yml` (new) — serves the built site under the `/ai-101`
+  prefix (all assets are baseURL-rooted) and renders each `index.print.html` with
+  headless Chrome; uploads the PDFs and the print HTML as artifacts
+
+Phase 4 — `1242cbf`:
+- `scripts/lint_paths.py` (new, 356 lines) — five checks, vocabulary in a CONFIG block at
+  the top, allowlist entries each carrying a written reason
+- `.github/workflows/path-lint.yml` (new) — runs the linter on PRs
+- `CLAUDE.md` — new "Deployment paths" section; the broken-images gotcha rewritten now
+  that both are fixed (WARN baseline is 0); new gotcha on `menu.shortcuts` and internal
+  links; file map updated
+- `README.md` — how to regenerate handouts and what CI enforces
+
 The path vocabulary can be overridden per repo via `site.Params.deploymentPaths`
 (`scripts/repoConfig.json`), so the same two shortcodes work unchanged in a repo with
 different path names — relevant to the CentralRepo follow-up.
 
 ## Session Summary
-- (write at end)
+
+Phases 1-4 implemented in the worktree on branch `workshop-deployment-path-lock`, four
+commits (`8adc164`, `80baf28`, `ece618c`, `1242cbf`), nothing pushed. Phase 5
+(`k8s-101-workshop`) was out of scope by instruction. Phase 0's remaining box — Jeff's
+browser sign-off on the UX — is still open and is the only thing standing between this
+branch and a PR.
+
+All four labs, both prereq pages, the gate and the reference section are now path-locked:
+every path-specific instruction is inside a `pathtabs` block or on a page carrying a
+`deploymentPath` marker. Verified per phase with the CI-equivalent build: **42 pages,
+0 WARN, 0 ERROR** at the end (36 pages / 0 WARN after Phases 1-2; the jump to 42 is the
+three generated pages, two of which render an extra `print` output).
+
+Three things turned up that were not in the plan:
+
+1. **The build was never clean to begin with.** Beyond the two known broken images there
+   were two unterminated `echo "UI: …` commands (a copy-paste of either would hang the
+   shell waiting for a closing quote) and 13 `cd "~` occurrences, not the 12 the plan
+   counted. All fixed; the WARN baseline is now 0, which is what makes "read the log for
+   WARN" a usable verification rule going forward.
+2. **A `repoConfig.json` shortcut cannot link an internal page without warning.**
+   `hugo.jinja` emits only `url =` for shortcuts, and relearn runs it through
+   `relLangURL`, which strips the baseURL off a fully-qualified self-URL — so even the
+   published absolute URL comes back "local" and warns on every page. Adding the two
+   handout shortcuts cost 2 permanent WARNs, so they were reverted and the handouts are
+   linked from the reference tables instead. Banking known-benign WARNs would have
+   defeated the verification rule above.
+3. **Handout PDF rendering needs `--disable-dev-shm-usage`.** Without it the longer
+   (Kubernetes) handout dies with `Printing failed.` on the default 64 MB `/dev/shm`
+   while the shorter one succeeds — a failure mode that only shows up on the bigger input.
+
+Verification actually performed, not assumed: handouts absent from every other page's
+rendered HTML (`hidden: true` confirmed by grep over the built site, not by reading the
+theme docs); both `index.print.html` render (120 KB / 151 KB); both PDFs render locally
+via containerised Chrome (22 pages / 991 KB, 26 pages / 1.49 MB); each handout contains
+only its own path's commands (the three surviving cross-path hits are all prose that
+explicitly tells the reader the other path does not apply); and each of the linter's five
+checks was proven by breaking a page, observing exit 1 with the right check name, and
+restoring — `HEAD` lints clean at 14 pages.
 
 ## Follow-ups
 - [ ] Upstream `pathtabs` to CentralRepo so the other ~5 workshop repos inherit it
@@ -339,6 +431,9 @@ different path names — relevant to the CentralRepo follow-up.
 - [x] ~~Decide whether `k8s-101-workshop/content/k8s-101.pdf` is retired~~ — it stays,
       decided 2026-08-17
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster
+- [ ] Add `pageRef` support to `menu.shortcuts` in `CentralRepo/scripts/templates/hugo.jinja`
+      so a workshop repo can put an internal page in the sidebar shortcuts without a WARN
+- [ ] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session
 
 ## Risks / Open Questions
 

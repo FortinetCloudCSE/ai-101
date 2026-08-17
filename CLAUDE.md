@@ -32,7 +32,10 @@ instructor_content/        — instructor-only notes (not part of the student pa
 solution/Makefile          — solution shortcuts
 layouts/                   — repo-local Hugo overrides
   shortcodes/{ContainerFlow,FTNThugoFlow,fortihugorunner}.html   — all 3 currently unused by content
+  shortcodes/{pathtabs,pathtab}.html   — the deployment-path switch (see below)
   partials/dependencies.html
+scripts/gen_handouts.py    — generates content/09Reference/handouts/ (--check = CI freshness gate)
+scripts/lint_paths.py      — deployment-path linter (run by path-lint.yml on PRs)
 scripts/repoConfig.json    — site chrome: title, author, banner, sidebar shortcuts
 plans/                     — plan/spec/log files, `NNNN_` prefixed (NOT docs/plans — see gotcha)
 lab-app/
@@ -44,6 +47,8 @@ lab-app/
   static.yml                     — build + deploy to Pages on push to main (DIVERGED — see gotcha)
   build-images.yml               — build/push lab images to GHCR; triggers on push to main
                                    touching lab-app/images/** or the workflow itself
+  handout-pdf.yml                — renders the generated handouts to PDF (push to main + dispatch)
+  path-lint.yml                  — runs scripts/lint_paths.py on PRs
   lacework-code-security-pr.yml  — Lacework scan on PRs
   codex-advisory-review.yml      — advisory LLM diff review on PRs
 Jenkinsfile                — content-lint pipeline
@@ -79,9 +84,7 @@ Current build state (verified 2026-08-17, branch `jkopkoEdits`): exit 0, 36 page
 
 ## Critical Patterns & Gotchas
 
-- **Two images are actually broken on published pages.** Both produce a Hugo `is not a resource` WARN, and `errorLevel` is `warning`, so the build still exits 0 and ships them:
-  - `content/01Intro/2_prereqs_k8s/index.md:207` — `![chatbotui](./browser.png.png)`. Doubled extension; the file in the bundle is `browser.png`.
-  - `content/04MCP/1_lab/index.md:199` — `![searchweb](../searchweb.png)`. The image lives at `content/04MCP/searchweb.png`, one level above the `1_lab` bundle, so it is not a resource of that page and the raw path passes through to output where it resolves to the site root. Fix by moving the PNG into the `1_lab/` bundle and referencing it bare.
+- **Hugo warnings never fail the build, so the build log is the only real check.** `errorLevel` is `warning` in `scripts/repoConfig.json`, so an `is not a resource` WARN still exits 0 and ships a broken image. Two such images shipped for months (`browser.png.png`, and `../searchweb.png` referenced from outside its bundle); both are fixed as of the deployment-path work. Verification means `grep -cE '^(WARN|ERROR)'` on the build log, not the exit code. The baseline is **0 WARN**.
 - **`static.yml` here is AHEAD of the template, and a template upgrade will silently regress it.** This repo's copy adds a `trap cleanup EXIT`, captures `docker wait` status, echoes `docker logs`, and fails the job with `::error::` on a non-zero build. The 12-repo consensus version (md5 `1583cc7583b39c3b43c152aec99fda94`, used by k8s-101-workshop, faig, fortiweb, AWS-FGT-301, PC104 and others) does **none** of that — it discards the build exit code, so a failed Hugo build deploys an empty/stale site silently. `static.yml` is in the template's `FILES_TO_COPY`, so running the upgrade tool overwrites this improvement. Re-apply it, or better, push it upstream into CentralRepo.
 - **`docs/` is machine-owned — never put plan files there.** `.gitignore` excludes `docs/`, and `CentralRepo/scripts/batch_repo_update.py` hardcodes `FOLDERS_TO_DELETE = ["docs"]` with `BRANCH = "main"`, deleting every blob under it via the GitHub tree API and pushing that deletion straight to `main`. Plan/spec/log files go in root-level **`plans/`** (see `plans/README.md`), which is inert to Hugo and outside the delete list.
 - **`repo_upgrade_spec.json` is documentation, not the executed contract.** `batch_repo_update.py` never reads it — the script's own hardcoded `FILES_TO_COPY` / `FILES_TO_DELETE` / `FOLDERS_TO_DELETE` constants are what run. The two can drift silently. Read the script, not the spec, when predicting what an upgrade will do.
@@ -97,6 +100,20 @@ Current build state (verified 2026-08-17, branch `jkopkoEdits`): exit 0, 36 page
 - **`fdevsec.yaml` has an unfilled `app: <insert app id here>`** — `org` is a real UUID, scanners are `sast, secret, sca, iac, container`, and `fail_pipeline.risk_rating: 7`. The app id is genuinely missing here (unlike some sibling repos, where it is populated). Leave it unless asked.
 - **Deploy triggers only on push to `main`.** Work on `jkopkoEdits` publishes nothing until merged.
 - **`codex-advisory-review.yml` uses `pull_request_target` deliberately** so `OPENAI_API_KEY` comes from the trusted base branch and the PR head is never checked out. Do not convert it to `pull_request`.
+- **A `menu.shortcuts` entry in `scripts/repoConfig.json` cannot point at a page in this site without producing a WARN.** `hugo.jinja` only ever emits `url =` for shortcuts, never `pageRef`, and relearn's `menuPermalink.gotmpl` runs the value through `relLangURL` — which strips the baseURL off a fully-qualified self-URL, so the result is classified "local" and warns on every page. Link internal pages from content bodies instead. Fixing it properly means adding `pageRef` support to `hugo.jinja` upstream in CentralRepo.
+
+## Deployment paths
+
+The workshop has two deployment paths. Readers choose once on the Introduction gate page and every later page follows that choice.
+
+- **Vocabulary is fixed.** `groupid: deploy-path`; tab keys `docker` / `k8s`; tab titles **"Docker Compose"** and **"Kubernetes / Helm"**, in that order, with **no icons**. The vocabulary is declared in three places that must agree: `layouts/shortcodes/pathtab.html`, `PATHS` in `scripts/gen_handouts.py`, and the CONFIG block in `scripts/lint_paths.py`.
+- **Never add an icon to a path tab.** relearn computes `itemid = anchorize(plainify(title)) + anchorize(icon)`, so an icon changes the itemid, the group no longer matches other pages, and selection silently falls back to the first tab.
+- **Every path branch goes through `{{< pathtabs >}}` / `{{% pathtab path="…" %}}`.** Never hand-write `groupid="deploy-path"` on a plain `{{< tabs >}}` group — the linter rejects it. `pathtabs` **fails the build** (`errorf`, not `warnf`) if a block omits a path or defines one twice, which is the one place in this repo where a content mistake is a hard error rather than a WARN.
+- **A whole page can be path-scoped** with `deploymentPath: docker` or `deploymentPath: k8s` in front matter, plus an opening `notice` linking the other path's page. Used by the two prereq pages, the Cloud Shell page, and the generated handouts. The linter treats such a page as one big path block.
+- **Print renders only the active tab** (`format-print.css`), so printing a tabbed lab page silently drops the other path. That is why handouts exist rather than a "print this page" link.
+- **`scripts/gen_handouts.py` generates `content/09Reference/handouts/`** — one linear single-path page per path, walking `content/` in weight order, flattening each pathtabs block to that path and dropping the other entirely. Bundle images are copied into the handout bundle under a `<dir-slug>-<name>.png` prefix so they stay genuine page resources. `OUT_DIR` is fully generator-owned: orphans are deleted. Handouts carry `hidden: true` (keeps them out of the sidebar — verified in rendered HTML) and `outputs: ["html", "print"]` (gives each an `index.print.html`, which `handout-pdf.yml` turns into a PDF).
+- **`scripts/lint_paths.py` is the guardrail**, run on PRs by `path-lint.yml`. It fails on: a path-like title in a plain `tabs` group; a hand-written `deploy-path` groupid; a path-specific token outside a path block; `cd "~` anywhere (bash does not expand `~` inside double quotes, so that command always fails); and stale handouts. Prose that legitimately names both paths goes in the `ALLOWLIST`, which requires a written reason per entry.
+- **After any content edit, run `python3 scripts/lint_paths.py`** and commit regenerated handouts with the change.
 
 ## Environment Variables
 

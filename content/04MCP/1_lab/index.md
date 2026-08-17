@@ -9,47 +9,117 @@ changing a line of agent code. You will see dynamic discovery in action, add
 a new tool to a running system without restarting the agent, and observe that
 the agent loop behaves identically regardless of which backend is active.
 
+{{< pathtabs title="Your path" >}}
+{{% pathtab path="docker" %}}
+**Docker Compose** — every command on this page runs on your own machine.
+
+Before you start, confirm Lab 2's stack is still up:
+
+```bash
+cd ~/ai-101/lab-app/compose
+docker compose ps
+```
+
+Expect `ollama`, `agent`, and `ui` with state `running`. If they are not, redo the
+Lab 2 deploy step.
+
+*On Kubernetes instead? Click the **Kubernetes / Helm** tab — every lab page will
+follow your choice.*
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+**Kubernetes / Helm** — every command on this page runs in your Cloud Shell session
+against your cluster.
+
+Before you start, confirm the cluster and your agent port-forward:
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=ai101
+jobs
+```
+
+Expect the `ai101-ollama`, `ai101-agent`, and `ai101-ui` pods `Running`, and the
+agent port-forward from Lab 2 listed by `jobs`. If it is missing, restart it:
+
+```bash
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+```
+
+*Running locally with Docker instead? Click the **Docker Compose** tab — every lab
+page will follow your choice.*
+{{% /pathtab %}}
+{{< /pathtabs >}}
+
 ## Deploy
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 docker compose --profile lab2 down 2>/dev/null; true
 docker compose --profile lab3 up -d
 ```
 
 Verify:
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 docker compose ps
 curl -s http://localhost:8001/health | jq .
 # Expected: "tool_mode": "mcp"
 curl -s http://localhost:8001/tools | jq '.tools[].name'
 # Expected: "query_employees", "send_message"
 ```
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 ```
-### only start if not already forwarded
+
+Start the agent port-forward only if it is not already forwarded (check with `jobs`):
 
 ```bash
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280
 ```
-Click the printed link to open the chatbot UI directly — no port-forward needed for the UI itself.
-{{% /tab %}}
-{{< /tabs >}}
+
+The UI is reachable directly via NodePort — no port-forward needed for the UI itself:
+
+```bash
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+```
+
+Verify:
+```bash
+curl -s http://localhost:8001/health | jq .
+# Expected: "tool_mode": "mcp"
+curl -s http://localhost:8001/tools | jq '.tools[].name'
+# Expected: "query_employees", "send_message"
+```
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 ---
 
 ## Step 1 — Same agent, different backend
 
-Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100) / Web Preview URL (Kubernetes) and ask:
+Open the UI, then ask the question below.
+
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
+Open [http://localhost:8080](http://localhost:8080).
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+Open the FQDN link printed by the `echo` command in the Deploy step above
+(NodePort `30280`).
+
+If you are using Cloud Shell Web Preview instead, forward the UI service and open
+port `8100`:
+
+```bash
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+```
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 > Who is in the Engineering department?
 
@@ -114,21 +184,24 @@ itself never calls this function differently.
 
 ## Step 3 — Add a tool without restarting the agent
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 ENABLE_EXTRA_TOOL=true docker compose --profile lab3 up -d mcp-server
 ```
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+
+Expected: only the `mcp-server` container is recreated.
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade ai101 ./ai101 -f ai101/values-lab3.yaml \
     --set mcpServer.enableExtraTool=true
 ```
-{{% /tab %}}
-{{% tab title="Expected Output" style="info" %}}
+
+Expected output:
+
 ```
 Release "ai101" has been upgraded. Happy Helming!
 NAME: ai101
@@ -139,8 +212,8 @@ REVISION: 8
 DESCRIPTION: Upgrade complete
 TEST SUITE: None
 ```
-{{% /tab %}}
-{{< /tabs >}}
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 - Only the MCP server was restarted. The agent container is still running with
 its previous tool list. Trigger re-discovery without touching the agent:
@@ -196,7 +269,7 @@ The Trace panel should show `search_web` being called. The result is stubbed
 (the server returns canned text), but the full discovery → schema registration
 → tool call → result flow is real.
 
- ![searchweb](../searchweb.png)
+ ![searchweb](searchweb.png)
 
 ---
 
