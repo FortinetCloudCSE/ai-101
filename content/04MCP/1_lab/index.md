@@ -14,13 +14,14 @@ the agent loop behaves identically regardless of which backend is active.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "~/ai-101/lab-app/compose"
 docker compose --profile lab2 down 2>/dev/null; true
 docker compose --profile lab3 up -d
 ```
 
 Verify:
 ```bash
+cd "~/ai-101/lab-app/compose"
 docker compose ps
 curl -s http://localhost:8001/health | jq .
 # Expected: "tool_mode": "mcp"
@@ -30,19 +31,17 @@ curl -s http://localhost:8001/tools | jq '.tools[].name'
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd lab-app/helm
+cd "~/ai-101/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 ```
 ### only start if not already forwarded
 
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 &
-kubectl port-forward svc/ai101-agent 8001:8001 &
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280
 ```
-
-**Azure Cloud Shell users** — open the UI via Web Preview:
-click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
+Click the printed link to open the chatbot UI directly — no port-forward needed for the UI itself.
 {{% /tab %}}
 {{< /tabs >}}
 
@@ -118,12 +117,13 @@ itself never calls this function differently.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "~/ai-101/lab-app/compose"
 ENABLE_EXTRA_TOOL=true docker compose --profile lab3 up -d mcp-server
 ```
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
+cd "~/ai-101/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab3.yaml \
     --set mcpServer.enableExtraTool=true
 ```

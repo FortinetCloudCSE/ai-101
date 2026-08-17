@@ -14,7 +14,7 @@ describes.
 {{< tabs >}}
 {{% tab title="Docker Compose" %}}
 ```bash
-cd lab-app/compose
+cd "~/ai-101/lab-app/compose"
 docker compose --profile lab1 down 2>/dev/null; true
 docker compose --profile lab2 up -d
 docker compose ps
@@ -23,22 +23,16 @@ Expected: `ollama`, `agent`, and `ui` all running.
 {{% /tab %}}
 {{% tab title="Kubernetes / Helm" %}}
 ```bash
-cd lab-app/helm
+cd "~/ai-101/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 &
 ```
-The port 8100 port-forwarding should be up and running. only run the following if your are unable to access the chatbot 
+The UI is reachable directly via NodePort — no port-forward needed:
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 &
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
 ```
-
-**Azure Cloud Shell users** — open the UI via Web Preview:
-click the **Web Preview** icon (top-right toolbar) → **Configure** → port **8100** → **Open and browse**.
-
-{{% notice style="warning" title="Web Preview returns Unauthorized?" %}}
-The Azure Portal's embedded Cloud Shell can occasionally fail to authenticate its Web Preview proxy even when the port-forward is working. Leave this Cloud Shell tab open so the port-forward keeps running. In a new browser tab, open [shell.azure.com](https://shell.azure.com), then use **Web Preview** to close and reopen port **8100**. Related Cloud Shell proxy failures are documented in [Azure/CloudShell issue #368](https://github.com/Azure/CloudShell/issues/368) and [Microsoft Q&A](https://learn.microsoft.com/en-us/answers/questions/1500669/how-to-troubleshoot-web-preview-in-cloud-shell).
-{{% /notice %}}
+Click the printed link to open the chatbot.
 {{% /tab %}}
 {{< /tabs >}}
 
@@ -62,7 +56,7 @@ curl -s http://localhost:8001/health | jq .
 {{% /tab %}}
 {{< /tabs >}}
 
-Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100). For Cloudshell users open Web Preview to port 8100.
+Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100). or via the printed FQDN link above (Kubernetes).
 
 ---
 

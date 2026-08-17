@@ -89,6 +89,9 @@ spec:
     - name: http
       port: {{ .Values.ui.service.port }}
       targetPort: http
+      {{- if .Values.ui.service.nodePort }}
+      nodePort: {{ .Values.ui.service.nodePort }}
+      {{- end }}
 {{- if .Values.ui.ingress.enabled }}
 ---
 apiVersion: networking.k8s.io/v1
