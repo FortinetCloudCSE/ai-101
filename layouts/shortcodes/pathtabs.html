@@ -1,0 +1,34 @@
+{{- $page := .Page }}
+{{- $file := "[virtual file]" }}
+{{- with and $page $page.File $page.File.Filename }}{{ $file = . }}{{ end }}
+{{- $unused := .Inner }}
+{{- $collected := .Scratch.Get "pathtabs" | default slice }}
+{{- $tabs := slice }}
+{{- range $spec := site.Params.deploymentPaths | default (slice
+  (dict "key" "docker" "title" "Docker Compose")
+  (dict "key" "k8s" "title" "Kubernetes / Helm")
+) }}
+  {{- $match := where $collected "path" $spec.key }}
+  {{- if not $match }}
+    {{- errorf "%s: pathtabs block is missing the %q path. Every pathtabs block must define both %q and %q, or a reader on the missing path silently sees the other path's steps." $file $spec.key "docker" "k8s" }}
+  {{- else if gt (len $match) 1 }}
+    {{- errorf "%s: pathtabs block defines the %q path %d times; expected exactly once." $file $spec.key (len $match) }}
+  {{- else }}
+    {{- $tabs = $tabs | append (dict
+      "title"   $spec.title
+      "content" (index $match 0).content
+      "color"   ""
+      "icon"    ""
+      "style"   ""
+    ) }}
+  {{- end }}
+{{- end }}
+{{- partial "shortcodes/tabs.html" (dict
+  "page"    $page
+  "content" $tabs
+  "groupid" "deploy-path"
+  "title"   (.Get "title" | default "")
+  "color"   ""
+  "icon"    ""
+  "style"   ""
+) }}

@@ -9,21 +9,60 @@ loop execute in real time through the Trace panel, trigger both single and
 chained tool calls, and read the loop code to see exactly what the theory
 describes.
 
+{{< pathtabs title="Your path" >}}
+{{% pathtab path="docker" %}}
+**Docker Compose** — every command on this page runs on your own machine.
+
+Before you start, confirm Lab 1's Ollama container is still up:
+
+```bash
+cd ~/ai-101/lab-app/compose
+docker compose ps
+```
+
+Expect `ollama` with state `running`. If it is not, redo the Lab 1 deploy step.
+
+*On Kubernetes instead? Click the **Kubernetes / Helm** tab — every lab page will
+follow your choice.*
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+**Kubernetes / Helm** — every command on this page runs in your Cloud Shell session
+against your cluster.
+
+Before you start, confirm the cluster and your Ollama port-forward:
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=ai101
+jobs
+```
+
+Expect the `ai101-ollama` pod `Running`, and the Ollama port-forward from setup
+listed by `jobs`. If it is missing, restart it:
+
+```bash
+kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/ai101-ollama-port-forward.log 2>&1 < /dev/null &
+```
+
+*Running locally with Docker instead? Click the **Docker Compose** tab — every lab
+page will follow your choice.*
+{{% /pathtab %}}
+{{< /pathtabs >}}
+
 ## Deploy
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 docker compose --profile lab1 down 2>/dev/null; true
 docker compose --profile lab2 up -d
 docker compose ps
 ```
 Expected: `ollama`, `agent`, and `ui` all running.
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
@@ -33,8 +72,8 @@ The UI is reachable directly via NodePort — no port-forward needed:
 echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
 ```
 Click the printed link to open the chatbot.
-{{% /tab %}}
-{{< /tabs >}}
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 Confirm the agent is up and in hardcoded mode:
 
@@ -56,7 +95,24 @@ curl -s http://localhost:8001/health | jq .
 {{% /tab %}}
 {{< /tabs >}}
 
-Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100). or via the printed FQDN link above (Kubernetes).
+Now open the UI:
+
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
+Open [http://localhost:8080](http://localhost:8080).
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+Open the FQDN link printed by the `echo` command in the Deploy step above
+(NodePort `30280`).
+
+If you are using Cloud Shell Web Preview instead, forward the UI service and open
+port `8100`:
+
+```bash
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+```
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 ---
 

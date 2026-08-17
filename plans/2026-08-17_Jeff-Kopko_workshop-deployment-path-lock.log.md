@@ -8,7 +8,7 @@ Related Plan: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
 - [x] Verify relearn tab persistence mechanics in theme source
 - [x] Resolve design decisions with Jeff (3 question rounds)
 - [x] Spec + plan + log written and committed
-- [ ] Phase 0 proof of concept
+- [x] Phase 0 proof of concept (awaiting browser sign-off)
 - [ ] Phase 1 remaining ai-101 content
 - [ ] Phase 2 path-scoped troubleshooting
 - [ ] Phase 3 handouts + PDF
@@ -74,6 +74,40 @@ Related Plan: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
 - What I'm doing: writing spec, plan, and log; committing before any further tool calls.
 - Why: global workflow step 5a — uncommitted plan files in a shared checkout get swept
   into a concurrent session's `git add -A`.
+
+### 21:55
+- What I'm doing: Phase 0 — `pathtabs`/`pathtab` shortcodes, the gate page, and a full
+  conversion of Lab 2.
+- Why: Jeff resolved the last open questions; prove the pattern on one page before
+  converting the rest.
+- Notes / findings:
+  - `CentralRepo/scripts/local_copy.sh` copies `../UserRepo/layouts/shortcodes/*` into the
+    theme's layouts at container start — repo-local shortcodes work with no config.
+  - Build output lives at `/home/CentralRepo/public` **inside the container** and is not
+    written to the host by `build`; had to inspect it from within the container.
+  - `hugo --minify` strips attribute quotes, so grepping rendered HTML needs
+    `data-tab-group=[^ >]*`, not a quoted pattern.
+  - Rendered Lab 2: 3 `deploy-path` groups (badge, deploy, UI URL) with itemids
+    `docker-compose` / `kubernetes--helm`; the 4 non-path groups kept random ids.
+  - Live confirmation of the icon hazard: the "Expected Output" tabs render as
+    `data-tab-item="expected-outputfa-fw-fas-fa-info-circle"` — the icon is concatenated
+    into the id, exactly why `pathtabs` forbids icons on path tabs.
+  - Found and fixed a copy-paste blocker unrelated to pathing: `cd "~/ai-101/..."` appears
+    14 times across four pages. Bash does not expand `~` inside double quotes, so every one
+    fails. Fixed the two in Lab 2; the rest are Phase 1.
+- Decision: `pathtabs` uses `errorf`, so a missing path fails the build rather than only
+  the linter. Verified: exit 1, message names the file. Defence in depth — the linter can
+  be bypassed, the build cannot.
+- Decision: path vocabulary is overridable via `site.Params.deploymentPaths`, so the same
+  shortcodes drop into another repo with different path names (CentralRepo follow-up).
+
+### 22:05
+- What I'm doing: verifying the Phase 3 blocker — per-page `print` output.
+- Why: `hugo.jinja` enables the `print` output format for `home` only; if a page cannot opt
+  in, the whole handout design needs a different mechanism.
+- Notes / findings: `outputs: ["html","print"]` in page front matter produced
+  `zztmptest/index.print.html`. Phase 3 proceeds as planned. Temp probe page removed;
+  rebuild confirms 36 pages and only the two pre-existing image WARNs.
 
 ## Commands (high-level)
 - `grep -rn 'tab title=' content/` (both repos) — tally which tab groups are path branches vs output panes

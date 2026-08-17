@@ -1,0 +1,22 @@
+{{- $_hugo_config := `{ "version": 1 }` }}
+{{- $page := .Page }}
+{{- $file := "[virtual file]" }}
+{{- with and $page $page.File $page.File.Filename }}{{ $file = . }}{{ end }}
+{{- $keys := slice }}
+{{- range site.Params.deploymentPaths | default (slice
+  (dict "key" "docker" "title" "Docker Compose")
+  (dict "key" "k8s" "title" "Kubernetes / Helm")
+) }}
+  {{- $keys = $keys | append .key }}
+{{- end }}
+{{- $path := .Get "path" }}
+{{- if not (in $keys $path) }}
+  {{- errorf "%s: pathtab needs path=\"<key>\" where key is one of %v; got %q." $file $keys $path }}
+{{- end }}
+{{- if not .Parent }}
+  {{- errorf "%s: pathtab must be nested inside a pathtabs block." $file }}
+{{- end }}
+{{- with .Parent }}
+  {{- $collected := .Scratch.Get "pathtabs" | default slice }}
+  {{- .Scratch.Set "pathtabs" ($collected | append (dict "path" $path "content" $.Inner)) }}
+{{- end }}

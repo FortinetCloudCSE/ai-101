@@ -201,16 +201,23 @@ from `jkopkoEdits`.
 ## Plan
 
 ### Phase 0 — Proof of concept (direct, before the rest is approved to proceed)
-- [ ] Write `layouts/shortcodes/pathtabs.html` + `layouts/shortcodes/pathtab.html`
-- [ ] Convert `content/01Intro/_index.md` to the `pathtabs` gate
-- [ ] Convert `content/03Agents/1_lab/index.md` fully (badge + preflight + the tab pair
+- [x] Write `layouts/shortcodes/pathtabs.html` + `layouts/shortcodes/pathtab.html`
+- [x] Convert `content/01Intro/_index.md` to the `pathtabs` gate
+- [x] Convert `content/03Agents/1_lab/index.md` fully (badge + preflight + the tab pair
       at :15 + the inline URLs at :59)
-- [ ] Verify: CI-equivalent build clean of new `WARN`s; `fortihugorunner launch-server`;
-      click Kubernetes on the gate, confirm Lab 3 renders Kubernetes on load and after
-      a hard reload; confirm with JavaScript disabled the page is still followable
-- [ ] Verify `outputs: ["html","print"]` in page front matter actually produces
-      `index.print.html` with this image (blocks Phase 3 if it does not)
-- [ ] Jeff previews and signs off on the UX before Phase 1
+- [x] Verify: CI-equivalent build — 36 pages (unchanged), zero new `WARN`s, only the two
+      pre-existing broken-image warnings
+- [x] Verify rendered output: Lab 2 emits 3 `deploy-path` groups, the gate emits 1, each
+      with itemids `docker-compose` / `kubernetes--helm`; the 4 non-path groups on Lab 2
+      keep their random ids and are untouched
+- [x] Negative test: a `pathtabs` block missing one path fails the build with exit 1 and
+      names the file — protection does not depend on the linter
+- [x] Verify `outputs: ["html","print"]` in page front matter produces
+      `zztmptest/index.print.html` with this image — **Phase 3 unblocked**
+- [ ] Jeff previews in a browser and signs off on the UX before Phase 1
+      (`fortihugorunner launch-server`: click Kubernetes on the gate, confirm Lab 2 shows
+      Kubernetes on load and after a hard reload, and that the page is still followable
+      with JavaScript disabled)
 
 ### Phase 1 — Convert remaining ai-101 content
 - [ ] `content/02Inference/1_lab/index.md` (no tabs today)
@@ -254,7 +261,22 @@ from `jkopkoEdits`.
 - [ ] Update memory files and mark this plan's boxes
 
 ## Plan Changes
-- (none)
+
+- 2026-08-17, Jeff: handout pages live in the **reference section only**, not the sidebar.
+- 2026-08-17, Jeff: `k8s-101-workshop/content/k8s-101.pdf` **stays as-is** for now;
+  handout PDFs do not replace it.
+- 2026-08-17, Jeff: confirmed **visible-and-correctable** over a hard path lock — a reader
+  can always switch paths; the design makes the wrong path obvious, not impossible.
+- 2026-08-17, Jeff: `k8s-101-workshop` scope stays minimal (Phase 5 as written).
+- 2026-08-17, added during Phase 0: `pathtabs` calls `errorf`, so a missing or duplicated
+  path **fails the Hugo build**, not just the linter. Verified: exit 1 with the offending
+  filename. The linter remains for the checks Hugo cannot make (path tokens outside path
+  blocks, handout freshness).
+- 2026-08-17, added during Phase 0: **fix `cd "~/ai-101/..."`** everywhere. Bash does not
+  expand `~` inside double quotes, so all 14 occurrences fail with "No such file or
+  directory" when copy-pasted, on both paths. Fixed in `03Agents/1_lab` during Phase 0;
+  the remaining 12 (`04MCP/1_lab` ×4, `05Security/1_lab` ×6, `01Intro/2_prereqs_k8s` ×2)
+  are Phase 1, plus a lint rule for the pattern.
 
 ## Decisions & Commentary
 
@@ -285,7 +307,20 @@ from `jkopkoEdits`.
   nothing to convert; the value is that a returning AKS path cannot be built wrong.
 
 ## Files Changed
-- (none yet)
+
+Phase 0:
+- `layouts/shortcodes/pathtabs.html` (new) — path-tab wrapper, hardcoded `groupid`, both
+  titles, no icons; `errorf` on a missing or duplicated path
+- `layouts/shortcodes/pathtab.html` (new) — collects one path body into the parent's
+  Scratch, mirroring the theme's own `tab.html`; `errorf` on an unknown path key or when
+  used outside `pathtabs`
+- `content/01Intro/_index.md` — "Choose your path" list replaced by the `pathtabs` gate
+- `content/03Agents/1_lab/index.md` — badge + preflight block added; Deploy tabs and the
+  UI-URL parenthetical converted to `pathtabs`; two `cd "~/…"` commands fixed
+
+The path vocabulary can be overridden per repo via `site.Params.deploymentPaths`
+(`scripts/repoConfig.json`), so the same two shortcodes work unchanged in a repo with
+different path names — relevant to the CentralRepo follow-up.
 
 ## Session Summary
 - (write at end)
@@ -301,8 +336,8 @@ from `jkopkoEdits`.
 - [ ] `k8s-101-workshop`: fix beginner/experienced routing text, whose section numbers
       do not match the actual nav — deferred by decision
 - [ ] `k8s-101-workshop`: preflight verify blocks on hands-on pages — deferred by decision
-- [ ] Decide whether `k8s-101-workshop/content/k8s-101.pdf` is retired in favour of
-      generated handouts
+- [x] ~~Decide whether `k8s-101-workshop/content/k8s-101.pdf` is retired~~ — it stays,
+      decided 2026-08-17
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster
 
 ## Risks / Open Questions
@@ -311,13 +346,12 @@ from `jkopkoEdits`.
   `pathtabs` removes the ability to write the broken form, and the linter fails PRs.
 - **Handout freshness** — a generated artifact in git drifts unless checked. Mitigated by
   `--check` in the PR workflow.
-- **`outputs: ["html","print"]` per page may not work** with the pinned Hugo/relearn in
-  the image, since `hugo.jinja` enables `print` for `home` only. Verified in Phase 0; if
-  it fails, fall back to a repo-local `layouts/_default/single.print.html` or to a
-  print-friendly stylesheet on the handout pages.
-- **Generated handout pages appear in the sidebar** unless suppressed. Need to confirm the
-  relearn front-matter flag for menu exclusion during Phase 3. *Open question: sidebar or
-  reference-section-only?*
+- ~~**`outputs: ["html","print"]` per page may not work**~~ — **resolved in Phase 0**: it
+  works with the pinned image; `zztmptest/index.print.html` was produced.
+- **Generated handout pages must not appear in the sidebar** (decided): they live in the
+  reference section only. Need the relearn front-matter flag for menu exclusion in
+  Phase 3; if none is reliable, nest them under `09Reference` and exclude via the section's
+  own menu handling.
 - **PDF step needs headless Chrome in CI** — adds a dependency and ~1 min to the `main`
   workflow. Isolated in its own workflow so a failure cannot block the Pages deploy.
 - **Path choice does not carry from `k8s-101-workshop` to `ai-101`** — localStorage is
