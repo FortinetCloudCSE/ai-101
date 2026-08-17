@@ -34,7 +34,7 @@ layouts/                   — repo-local Hugo overrides
   shortcodes/{ContainerFlow,FTNThugoFlow,fortihugorunner}.html   — all 3 currently unused by content
   partials/dependencies.html
 scripts/repoConfig.json    — site chrome: title, author, banner, sidebar shortcuts
-plans/                     — plan/spec/log files (NOT docs/plans — see gotcha)
+plans/                     — plan/spec/log files, `NNNN_` prefixed (NOT docs/plans — see gotcha)
 lab-app/
   compose/docker-compose.yaml  — 6 services, profile-gated (`--profile lab1`…`lab4`)
   helm/ai101/                  — Chart.yaml, templates/, values.yaml + values-lab1..4.yaml
@@ -112,6 +112,6 @@ Optional locally: `DOCKER_CONTEXT` / `DOCKER_HOST` — fortihugorunner honors th
 
 **Add or change a lab component**: edit `lab-app/images/<component>/`, then update both `lab-app/compose/docker-compose.yaml` and `lab-app/helm/ai101/` (including the relevant `values-labN.yaml`). Pushing to `main` rebuilds and pushes to `ghcr.io/fortinetcloudcse/ai-101/<component>`.
 
-**Write a plan**: `plans/YYYY-MM-DD_<git-username>_<slug>.md` plus `.log.md`. Not `docs/plans/`.
+**Write a plan**: `plans/NNNN_YYYY-MM-DD_<git-username>_<slug>.md`, plus an optional `.log.md` and `.spec.md`. Not `docs/plans/`. `NNNN` is a per-repo sequence; the log is optional; on completion, durable facts get promoted into this file and the plan is left to decay. See `plans/README.md`.
 
 **Debug a broken published page**: run the CI build command locally — the dev server is more forgiving than the static build. `errorLevel` in `scripts/repoConfig.json` is `warning`, so Hugo warnings never fail the build; read the log for `WARN` lines rather than trusting the exit code.
