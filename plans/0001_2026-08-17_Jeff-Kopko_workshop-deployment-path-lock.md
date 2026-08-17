@@ -499,6 +499,14 @@ Additional work done in this session, beyond verification:
       to `values-lab3/4.yaml`). Merged forward, rebuilt (42 pages, 0 WARN), and confirmed the
       change makes the chart *match* content that already documented NodePort 30280 — so the
       Lab 3/4 k8s instructions were correct before the chart was.
+- [ ] **Add a `push: branches: [main]` trigger to `path-lint.yml`.** Surfaced 2026-08-17 right
+      after the merge: Robert's direct push `d512c5c` hand-edited the generated handouts and
+      left four occurrences in `handout-k8s` stale. The freshness gate caught it — but only
+      because `gen_handouts.py --check` is *also* wired into `handout-pdf.yml`, which does run
+      on `main`. The linter's other four checks (`cd "~`, path tokens, hand-written groupid,
+      path titles in plain tabs) run on `pull_request` only, so a direct push to `main` skips
+      them entirely. Cheap fix, and the guardrail is worth little if the busiest path around it
+      is unguarded.
 - [ ] `errorignore` as the cheaper alternative to `pageRef` upstream: relearn's
       `urlErrorReport.gotmpl` already honors `site.Params.errorignore` (a list of regexes
       matched against the URL). `hugo.jinja` emits neither it nor `pageRef`, and has no
