@@ -71,6 +71,7 @@ kubectl config view --minify -o jsonpath='{.clusters[0].cluster.server}'; echo
 cd ~
 git clone https://github.com/FortinetCloudCSE/ai-101.git
 cd ai-101
+AI101_HOME=$(pwd)
 ```
 
 ## - Install the chart for Lab 1
@@ -81,7 +82,7 @@ automatically by the cluster — no manual image pull required.
 {{< tabs >}}
 {{% tab title="Install Chart" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab1.yaml
 ```
 {{% /tab %}}
@@ -157,7 +158,7 @@ First, port-forward the Ollama service so Cloud Shell can reach the Ollama API r
 {{< tabs >}}
 {{% tab title="Port Forward" %}}
 ```bash
-kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/port-forward.log 2>&1 &
+kubectl port-forward svc/ai101-ollama 11434:11434 > /tmp/ai101-ollama-port-forward.log 2>&1 < /dev/null &
 ```
 
 Then, in a new terminal or current terminal, send a test prompt to the Ollama OpenAI-compatible API endpoint:

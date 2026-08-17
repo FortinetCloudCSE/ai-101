@@ -139,7 +139,11 @@ kubectl rollout status deployment/ai101-agent
 
 Wait for the agent to be ready before reloading the UI. 
 
-- If you dont see any response, run port-forwarding again: ```kubectl port-forward svc/ai101-agent 8001:8001 &```
+If you don't see a response, start the agent port-forward again:
+
+```bash
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+```
 
 {{< tabs >}}
 {{% tab title="Check Transparency" %}}

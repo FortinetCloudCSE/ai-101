@@ -62,12 +62,14 @@ to match what the target endpoint serves.
 
 **Docker Compose:**
 ```bash
+cd "$AI101_HOME/lab-app/compose"
 OPENAI_BASE_URL=https://your-fortiaigate-host/v1 \
   docker compose --profile lab4 up -d
 ```
 
 **Helm:**
 ```bash
+cd "$AI101_HOME/lab-app/helm"
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.openaiBaseUrl=https://your-fortiaigate-host/v1
 ```
@@ -76,6 +78,10 @@ No image changes. No code changes. The agent, MCP server, and UI are identical
 to Day 1.
 
 ## Known issues and workarounds
+
+### Azure Cloud Shell Web Preview returns Unauthorized
+
+See [Troubleshooting Azure Cloud Shell Web Preview](cloud-shell-web-preview/).
 
 ### First token takes 30+ seconds
 
