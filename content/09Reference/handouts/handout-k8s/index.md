@@ -211,7 +211,7 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 
 Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
 ```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 
 Click the printed link to open the chatbot UI in your browser.
@@ -451,7 +451,7 @@ kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.l
 ```
 The UI is reachable directly via NodePort — no port-forward needed:
 ```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 Click the printed link to open the chatbot.
 
@@ -706,7 +706,7 @@ kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.l
 The UI is reachable directly via NodePort — no port-forward needed for the UI itself:
 
 ```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 
 Verify:
@@ -944,7 +944,7 @@ cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
 
 Confirm agent is up in MCP mode with verbose transparency:
