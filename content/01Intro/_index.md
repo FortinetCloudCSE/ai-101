@@ -23,9 +23,40 @@ the agent image, MCP server, and UI are identical.
 
 ## Choose your path
 
-Pick the setup guide that matches your environment:
+Every lab in this workshop has two sets of commands. **Pick your path below.** Your
+choice is remembered for the whole workshop — from here on, each lab shows your
+path's commands automatically, and the top of every lab page tells you which path
+you are on.
 
-- **[Docker Compose](./1_prereqs_docker)** — recommended if you want to run on your own machine. Runs
-  locally on any laptop with Docker Desktop or Docker Engine.
-- **[Kubernetes / Helm](./2_prereqs_k8s)** — for attendees who want to deploy
-  to a cluster and are continuing from K8s-101-workshop. Requires Helm 3 and `kubectl`.
+{{< pathtabs title="Choose your deployment path" >}}
+{{% pathtab path="docker" %}}
+**Run everything on your own machine.** Recommended unless you are continuing from
+the Kubernetes 101 workshop.
+
+| | |
+|---|---|
+| Requires | Docker Engine + Compose v2, Git, ~8 GB RAM free |
+| GPU | Optional — speeds up model loading, not required |
+| Setup time | ~15 minutes |
+
+➔ **Continue: [Docker Compose Setup](./1_prereqs_docker)**
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+**Deploy to a Kubernetes cluster with Helm.** For attendees continuing from the
+[K8s 101 workshop](https://fortinetcloudcse.github.io/k8s-101-workshop/), who already
+have a cluster and an Azure Cloud Shell session.
+
+| | |
+|---|---|
+| Requires | `kubectl` 1.28+, Helm 3.14+, `jq` 1.6+, a running cluster, a default StorageClass |
+| Node size | Ollama needs ≥ 4 GB RAM on the node it schedules to |
+| Setup time | ~20 minutes |
+
+➔ **Continue: [Kubernetes / Helm Setup](./2_prereqs_k8s)**
+{{% /pathtab %}}
+{{< /pathtabs >}}
+
+{{% notice style="note" title="Continuing from K8s 101?" %}}
+Your path selection is stored per workshop site, so it does not carry over from
+K8s 101 — clicking **Kubernetes / Helm** above is what sets it here.
+{{% /notice %}}

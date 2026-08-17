@@ -2,7 +2,14 @@
 title: "Troubleshooting Azure Cloud Shell Web Preview"
 linkTitle: "Cloud Shell Web Preview"
 weight: 10
+deploymentPath: k8s
 ---
+
+{{% notice style="note" title="Kubernetes / Helm path only" %}}
+This page applies to the **Kubernetes / Helm** path only. On the **Docker Compose**
+path the UI is published on your own machine at `http://localhost:8080` and Azure
+Cloud Shell is not involved.
+{{% /notice %}}
 
 Azure Cloud Shell Web Preview uses an authenticated Azure proxy to expose a
 port from your Cloud Shell session. An **Unauthorized** response can therefore
