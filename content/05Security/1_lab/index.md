@@ -9,12 +9,53 @@ exfiltration, all through the agent's legitimate tools. You will then see what
 the same attack looks like when observability is suppressed, and optionally
 trigger an MCP tool-poisoning attack via a modified tool description.
 
+{{< pathtabs title="Your path" >}}
+{{% pathtab path="docker" %}}
+**Docker Compose** — every command on this page runs on your own machine.
+
+Before you start, confirm Lab 3's stack is still up:
+
+```bash
+cd ~/ai-101/lab-app/compose
+docker compose ps
+```
+
+Expect `ollama`, `agent-mcp`, `mcp-server`, and `ui-mcp` with state `running`. If
+they are not, redo the Lab 3 deploy step.
+
+*On Kubernetes instead? Click the **Kubernetes / Helm** tab — every lab page will
+follow your choice.*
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+**Kubernetes / Helm** — every command on this page runs in your Cloud Shell session
+against your cluster.
+
+Before you start, confirm the cluster and your agent port-forward:
+
+```bash
+kubectl get pods -l app.kubernetes.io/instance=ai101
+jobs
+```
+
+Expect the `ai101-ollama`, `ai101-agent`, `ai101-mcp-server`, and `ai101-ui` pods
+`Running`, and the agent port-forward from Lab 3 listed by `jobs`. If it is missing,
+restart it:
+
+```bash
+kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
+```
+
+*Running locally with Docker instead? Click the **Docker Compose** tab — every lab
+page will follow your choice.*
+{{% /pathtab %}}
+{{< /pathtabs >}}
+
 ## Deploy
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 docker compose --profile lab3 down 2>/dev/null; true
 docker compose --profile lab4 up -d
 docker compose ps
@@ -26,21 +67,43 @@ Confirm agent is up in MCP mode with verbose transparency:
 curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 # Expected: "tool_mode": "mcp", "transparency": "verbose"
 ```
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
-echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280
+echo "UI: http://$(whoami)-worker.$(az group show -n "$(whoami)-k8s101-workshop" --query location -o tsv).cloudapp.azure.com:30280"
 ```
-Click the printed link to open the chatbot UI directly.
-{{% /tab %}}
-{{< /tabs >}}
 
-Open the UI at [http://localhost:8080](http://localhost:8080) (Docker) or [http://localhost:8100](http://localhost:8100) / Web Preview URL (Kubernetes). Confirm the
-**Audit Log** tab is visible on the right.
+Confirm agent is up in MCP mode with verbose transparency:
+
+```bash
+curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
+# Expected: "tool_mode": "mcp", "transparency": "verbose"
+```
+{{% /pathtab %}}
+{{< /pathtabs >}}
+
+Now open the UI and confirm the **Audit Log** tab is visible on the right.
+
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
+Open [http://localhost:8080](http://localhost:8080).
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+Open the FQDN link printed by the `echo` command in the Deploy step above
+(NodePort `30280`).
+
+If you are using Cloud Shell Web Preview instead, forward the UI service and open
+port `8100`:
+
+```bash
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+```
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 ---
 
@@ -120,30 +183,37 @@ to any caller is already the breach — exfiltration is one hop away.
 
 ## Step 2 — The same attack, no visible audit trail
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 TRANSPARENCY=quiet docker compose --profile lab4 up -d agent-mcp
 ```
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+
+Wait for the agent to be ready before reloading the UI. If you don't see a response,
+check that the container came back up:
+
 ```bash
-cd "~/ai-101/lab-app/helm"
+docker compose ps agent-mcp
+```
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+```bash
+cd ~/ai-101/lab-app/helm
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set agent.transparency=quiet
 kubectl rollout status deployment/ai101-agent
 ```
-{{% /tab %}}
-{{< /tabs >}}
 
-Wait for the agent to be ready before reloading the UI. 
-
-If you don't see a response, start the agent port-forward again:
+Wait for the agent to be ready before reloading the UI. The rollout replaces the
+agent pod, which kills the port-forward to the old one. If you don't see a response,
+start the agent port-forward again:
 
 ```bash
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 {{< tabs >}}
 {{% tab title="Check Transparency" %}}
@@ -197,10 +267,10 @@ modified tool description that embeds hidden instructions the model follows.
 Reset the agent to verbose mode, then restart the MCP server with the poisoned
 description:
 
-{{< tabs >}}
-{{% tab title="Docker Compose" %}}
+{{< pathtabs >}}
+{{% pathtab path="docker" %}}
 ```bash
-cd "~/ai-101/lab-app/compose"
+cd ~/ai-101/lab-app/compose
 docker compose --profile lab4 up -d agent-mcp
 
 ENABLE_EXTRA_TOOL=true POISON_DESC=true \
@@ -209,18 +279,23 @@ ENABLE_EXTRA_TOOL=true POISON_DESC=true \
 curl -s -X POST http://localhost:8001/tools/refresh | jq .
 # Expected: {"refreshed": true, "count": 3}
 ```
-{{% /tab %}}
-{{% tab title="Kubernetes / Helm" %}}
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
 ```bash
-cd "~/ai-101/lab-app/helm"
+cd ~/ai-101/lab-app/helm
 helm upgrade ai101 ./ai101 -f ai101/values-lab4.yaml \
     --set mcpServer.enableExtraTool=true \
     --set mcpServer.poisonDesc=true
 kubectl rollout status deployment/ai101-mcp-server
 curl -s -X POST http://localhost:8001/tools/refresh | jq .
+# Expected: {"refreshed": true, "count": 3}
 ```
-{{% /tab %}}
-{{< /tabs >}}
+
+This upgrade omits `--set agent.transparency=quiet`, so the agent goes back to the
+`verbose` value in `values-lab4.yaml` — which is what this step needs. If the agent
+pod was replaced, restart the port-forward before running the `curl`.
+{{% /pathtab %}}
+{{< /pathtabs >}}
 
 Inspect what the model now sees for `search_web`:
 

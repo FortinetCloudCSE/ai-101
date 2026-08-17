@@ -2,7 +2,13 @@
 title: "Docker Compose Setup"
 linkTitle: "Docker Compose"
 weight: 1
+deploymentPath: docker
 ---
+
+{{% notice style="note" title="Docker Compose path" %}}
+This whole page is the **Docker Compose** path. If you chose **Kubernetes / Helm**,
+use [Kubernetes / Helm Setup](/01Intro/2_prereqs_k8s) instead.
+{{% /notice %}}
 
 ## Prerequisites
 
