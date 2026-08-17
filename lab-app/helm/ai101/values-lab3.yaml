@@ -22,3 +22,7 @@ mcpServer:
 
 ui:
   enabled: true
+  service:
+    type: NodePort
+    port: 80
+    nodePort: 30280
