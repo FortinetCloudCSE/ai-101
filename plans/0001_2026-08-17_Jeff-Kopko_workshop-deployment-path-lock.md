@@ -421,6 +421,42 @@ explicitly tells the reader the other path does not apply); and each of the lint
 checks was proven by breaking a page, observing exit 1 with the right check name, and
 restoring — `HEAD` lints clean at 14 pages.
 
+### Close-out session (same day, after the merge into `jkopkoEdits`)
+
+Everything the two implementation sessions reported was re-run independently rather than
+taken on trust — builds, greps, the linter's negative proofs, HTTP fetches of every changed
+link, and a visual read of the PDF pages. That posture is what earned its keep twice:
+
+- It **found the print defect** (non-path tab groups unflattened, 12/17 dropped panels) that
+  neither implementation session caught and that a green build, a clean linter, and a
+  successfully-rendering PDF all failed to reveal. See the ticked follow-up below.
+- It **disproved one of my own earlier risk flags.** I had committed to checking that
+  `/`-rooted internal links like `/01Intro/2_prereqs_k8s` would break; they do not —
+  relearn's render-link hook rewrites them to `/ai-101/01intro/2_prereqs_k8s.html`. Reported
+  as a non-issue rather than left standing as a scary-sounding caveat.
+- It also caught a wrong number I had given the Phase 5 session (31 `tabs` groups in
+  `k8s-101-workshop`; the real count is 33 live plus 18 in disabled `.md.txt` files).
+
+Additional work done in this session, beyond verification:
+
+1. **`flatten_plain_tabs()` in `gen_handouts.py`** (`ace4d0c`) — the print fix.
+2. **`k8s-101-workshop` build WARNs 3 → 1** — the two `is not a page or a resource` link
+   WARNs fixed with `/`-rooted content refs. This **contradicted that repo's own
+   `CLAUDE.md`**, which said the WARNs were cosmetic and not to fix them; that note was
+   right that a third `../` breaks the link but missed the `/`-rooted form, so it was
+   rewritten rather than left contradicting the code.
+3. **Kubernetes prereq page headings renumbered** (`4a67bb9`) — eight `## - Title` headings
+   brought onto the Docker page's `## N. Title` spine, so the two halves of the same step
+   stop looking like different documents. Each substitution asserted unique before applying;
+   no anchor links referenced them; the `# Lab 1 —` lines are bash comments inside a fenced
+   block and were deliberately left alone.
+4. **Both repos merged to `main`** — `ai-101` PR #16, `k8s-101-workshop` PR #104. All checks
+   green, Pages deploy and the Handout-PDF workflow green, published pages spot-checked over
+   HTTP. `k8s-101-workshop`'s merge also published the pre-existing 37-file page-bundle
+   migration `a55f83c`, flagged prominently in the PR body rather than slipped in.
+5. **Worktrees and tmux sessions removed**, both plans set to `Status: Complete`, and durable
+   facts promoted into each repo's `CLAUDE.md` per the lifecycle's step 12.
+
 ## Follow-ups
 - [ ] Upstream `pathtabs` to CentralRepo so the other ~5 workshop repos inherit it
       (`k8s-101-workshop`, `faig-training-workshop`, `fortiweb-api-mcp-protection`,
