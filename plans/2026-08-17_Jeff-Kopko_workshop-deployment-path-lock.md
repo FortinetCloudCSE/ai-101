@@ -435,15 +435,18 @@ restoring — `HEAD` lints clean at 14 pages.
 - [ ] Add `pageRef` support to `menu.shortcuts` in `CentralRepo/scripts/templates/hugo.jinja`
       so a workshop repo can put an internal page in the sidebar shortcuts without a WARN
 - [ ] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session
-- [ ] **Flatten non-path tab groups in the handouts too.** Found during post-merge
-      verification of the PDFs: the generator flattens `pathtabs` correctly, but leaves the
-      remaining tab groups as tabs — and relearn's print CSS renders only the *active*
-      (first) tab, so every second/third panel is missing from the PDF. Measured on the
-      committed handouts: `handout-docker` hides 12 panels, `handout-k8s` hides 17. Sixteen
-      of those are "Expected Output"/"Example Output" (students cannot check their work on
-      paper) and one is a genuine instruction — the "Follow the logs" tab in the k8s
-      three-tab group. Fix: since a handout is a linear document, emit each non-path tab as
-      a labelled subsection rather than a tab. Cheap, contained to `gen_handouts.py`.
+- [x] **Flatten non-path tab groups in the handouts too — done 2026-08-17.** Found during
+      post-merge verification of the PDFs: the generator flattened `pathtabs` correctly but
+      left the remaining tab groups as tabs, and relearn's print CSS renders only the
+      *active* (first) tab, so every second/third panel was missing from the PDF. Measured
+      on the then-committed handouts: `handout-docker` hid 12 panels, `handout-k8s` 17.
+      Sixteen were "Expected Output"/"Example Output" (readers could not check their work on
+      paper) and one was a genuine instruction — the "Follow the logs" tab in the k8s
+      three-tab group. Fixed with `flatten_plain_tabs()` in `gen_handouts.py`: each tab
+      becomes a bold label plus its body. Bold, not a heading — depth is already four to
+      five levels after `demote_headings`, and these labels do not belong in the TOC.
+      Verified: 0 tab groups and 0 hidden panels in both print HTML files, PDFs grew 22→23
+      and 26→28 pages, and "Follow the logs" plus every expected-output block is on paper.
 - [ ] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
       handouts live in the reference section only makes a sidebar shortcut unwanted, so the
       `pageRef` limitation blocks nothing.

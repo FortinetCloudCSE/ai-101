@@ -7,6 +7,10 @@ block flattened down to that path's body. The other path is dropped entirely --
 not collapsed behind a tab -- because print output renders only the active tab
 (``format-print.css``), so a printed tabbed page silently omits the other path.
 
+For the same reason, the *non*-path tab groups (the command-vs-"Expected Output"
+axis) are flattened as well, into labelled subsections. Leaving them as tabs cost
+12 hidden panels in the Docker handout and 17 in the Kubernetes one.
+
 Usage
 -----
     python3 scripts/gen_handouts.py            # write the handout pages
@@ -89,6 +93,14 @@ PATHTABS_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*pathtabs\s*>\}\}\s*$")
 PATHTAB_OPEN_RE = re.compile(r"^\s*\{\{%\s*pathtab\s+path=\"([^\"]+)\"\s*%\}\}\s*$")
 PATHTAB_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*pathtab\s*%\}\}\s*$")
 HEADING_RE = re.compile(r"^(#{1,5})(\s+)(.*)$")
+
+# Plain (non-path) tab groups -- the command-vs-"Expected Output" axis. ``\b`` and
+# the mandatory whitespace before ``title=`` keep these from matching ``pathtabs``
+# / ``pathtab``, which are flattened separately and first.
+TABS_OPEN_RE = re.compile(r"^\s*\{\{<\s*tabs\b.*?>\}\}\s*$")
+TABS_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*tabs\s*>\}\}\s*$")
+TAB_OPEN_RE = re.compile(r"^\s*\{\{%\s*tab\s+.*?title=\"([^\"]*)\".*?%\}\}\s*$")
+TAB_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*tab\s*%\}\}\s*$")
 
 SIMPLE_FM_RE = re.compile(r"^(\w+)\s*:\s*(.*)$")
 
@@ -255,6 +267,66 @@ def flatten_pathtabs(body: str, path_key: str, source: str) -> str:
     return "\n".join(out)
 
 
+def flatten_plain_tabs(body: str, source: str) -> str:
+    """Turn every non-path tab group into labelled subsections.
+
+    Path tabs are resolved by ``flatten_pathtabs``; what is left is the
+    command-vs-"Expected Output" axis. Those must be flattened too, for the same
+    reason the path tabs are: ``format-print.css`` renders only the *active* tab,
+    so in a PDF every second and third panel silently disappears. That loses all
+    the expected-output panels a reader needs to check their work on paper, and at
+    least one real instruction ("Follow the logs").
+
+    Each tab becomes a bold label followed by its body. Deliberately not a
+    heading: heading depth here is already four to five levels deep after
+    ``demote_headings``, and these labels do not belong in the table of contents.
+    """
+    out: list[str] = []
+    # None = outside any tab group. Otherwise a list of rendered lines.
+    block: list[str] | None = None
+
+    def emit_label(title: str) -> None:
+        if block and block[-1].strip():
+            block.append("")
+        if title:
+            block.append(f"**{title}**")
+            block.append("")
+
+    for line, in_fence in iter_lines_with_fence_state(body.splitlines()):
+        if in_fence:
+            (out if block is None else block).append(line)
+            continue
+
+        if block is None:
+            if TABS_OPEN_RE.match(line):
+                block = []
+                continue
+            out.append(line)
+            continue
+
+        if TABS_OPEN_RE.match(line):
+            raise SystemExit(f"{source}: nested tabs groups are not supported")
+        m = TAB_OPEN_RE.match(line)
+        if m:
+            emit_label(m.group(1).strip())
+            continue
+        if TAB_CLOSE_RE.match(line):
+            continue
+        if TABS_CLOSE_RE.match(line):
+            while block and not block[0].strip():
+                block.pop(0)
+            while block and not block[-1].strip():
+                block.pop()
+            out.extend(block)
+            block = None
+            continue
+        block.append(line)
+
+    if block is not None:
+        raise SystemExit(f"{source}: unclosed tabs group")
+    return "\n".join(out)
+
+
 def demote_headings(body: str) -> str:
     """Push every heading down one level so page titles can be the ``##`` spine."""
     out: list[str] = []
@@ -374,7 +446,9 @@ def collapse_blank_runs(body: str) -> str:
 
 
 def render_page(page: Page, path_key: str, resources: dict[str, Path]) -> str:
-    body = flatten_pathtabs(page.body, path_key, str(page.md_path.relative_to(REPO_ROOT)))
+    source = str(page.md_path.relative_to(REPO_ROOT))
+    body = flatten_pathtabs(page.body, path_key, source)
+    body = flatten_plain_tabs(body, source)
     body = strip_site_only_paragraphs(body)
     body = rewrite_refs(body, page, resources)
     body = demote_headings(body)
