@@ -1,7 +1,7 @@
 # Session Log: Deployment-Path Lock for Workshop Guides
 Date: 2026-08-17
 Owner: Jeff Kopko
-Related Plan: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
+Related Plan: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
 
 ## Milestones
 - [x] Audit both repos for actual path-branching state

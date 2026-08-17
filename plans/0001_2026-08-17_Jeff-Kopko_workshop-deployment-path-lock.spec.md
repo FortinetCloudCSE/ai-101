@@ -2,8 +2,8 @@
 Date: 2026-08-17
 Owner: Jeff Kopko
 Slug: workshop-deployment-path-lock
-Spec File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
-Plan File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
+Spec File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
+Plan File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
 
 ## Problem
 

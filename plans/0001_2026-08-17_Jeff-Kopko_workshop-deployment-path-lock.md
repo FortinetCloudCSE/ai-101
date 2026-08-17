@@ -2,9 +2,12 @@
 Date: 2026-08-17
 Owner: Jeff Kopko
 Slug: workshop-deployment-path-lock
-Plan File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
-Log File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.log.md
-Spec File: plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
+Status: Complete
+Supersedes: none
+Superseded-By: none
+Plan File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.md
+Log File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.log.md
+Spec File: plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md
 
 ## Goal
 
@@ -14,7 +17,7 @@ workshop shows only that path — persistently, visibly, and verifiably. Applies
 
 ## Context / Links
 
-- Spec: `plans/2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md`
+- Spec: `plans/0001_2026-08-17_Jeff-Kopko_workshop-deployment-path-lock.spec.md`
 - Theme: `hugo-theme-relearn` (inside `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest`,
   mounted at `/home/CentralRepo`)
 - Relearn tabs docs: `CentralRepo/themes/hugo-theme-relearn/docs/content/shortcodes/tabs.en.md`
@@ -418,6 +421,42 @@ explicitly tells the reader the other path does not apply); and each of the lint
 checks was proven by breaking a page, observing exit 1 with the right check name, and
 restoring — `HEAD` lints clean at 14 pages.
 
+### Close-out session (same day, after the merge into `jkopkoEdits`)
+
+Everything the two implementation sessions reported was re-run independently rather than
+taken on trust — builds, greps, the linter's negative proofs, HTTP fetches of every changed
+link, and a visual read of the PDF pages. That posture is what earned its keep twice:
+
+- It **found the print defect** (non-path tab groups unflattened, 12/17 dropped panels) that
+  neither implementation session caught and that a green build, a clean linter, and a
+  successfully-rendering PDF all failed to reveal. See the ticked follow-up below.
+- It **disproved one of my own earlier risk flags.** I had committed to checking that
+  `/`-rooted internal links like `/01Intro/2_prereqs_k8s` would break; they do not —
+  relearn's render-link hook rewrites them to `/ai-101/01intro/2_prereqs_k8s.html`. Reported
+  as a non-issue rather than left standing as a scary-sounding caveat.
+- It also caught a wrong number I had given the Phase 5 session (31 `tabs` groups in
+  `k8s-101-workshop`; the real count is 33 live plus 18 in disabled `.md.txt` files).
+
+Additional work done in this session, beyond verification:
+
+1. **`flatten_plain_tabs()` in `gen_handouts.py`** (`ace4d0c`) — the print fix.
+2. **`k8s-101-workshop` build WARNs 3 → 1** — the two `is not a page or a resource` link
+   WARNs fixed with `/`-rooted content refs. This **contradicted that repo's own
+   `CLAUDE.md`**, which said the WARNs were cosmetic and not to fix them; that note was
+   right that a third `../` breaks the link but missed the `/`-rooted form, so it was
+   rewritten rather than left contradicting the code.
+3. **Kubernetes prereq page headings renumbered** (`4a67bb9`) — eight `## - Title` headings
+   brought onto the Docker page's `## N. Title` spine, so the two halves of the same step
+   stop looking like different documents. Each substitution asserted unique before applying;
+   no anchor links referenced them; the `# Lab 1 —` lines are bash comments inside a fenced
+   block and were deliberately left alone.
+4. **Both repos merged to `main`** — `ai-101` PR #16, `k8s-101-workshop` PR #104. All checks
+   green, Pages deploy and the Handout-PDF workflow green, published pages spot-checked over
+   HTTP. `k8s-101-workshop`'s merge also published the pre-existing 37-file page-bundle
+   migration `a55f83c`, flagged prominently in the PR body rather than slipped in.
+5. **Worktrees and tmux sessions removed**, both plans set to `Status: Complete`, and durable
+   facts promoted into each repo's `CLAUDE.md` per the lifecycle's step 12.
+
 ## Follow-ups
 - [ ] Upstream `pathtabs` to CentralRepo so the other ~5 workshop repos inherit it
       (`k8s-101-workshop`, `faig-training-workshop`, `fortiweb-api-mcp-protection`,
@@ -434,7 +473,9 @@ restoring — `HEAD` lints clean at 14 pages.
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster
 - [ ] Add `pageRef` support to `menu.shortcuts` in `CentralRepo/scripts/templates/hugo.jinja`
       so a workshop repo can put an internal page in the sidebar shortcuts without a WARN
-- [ ] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session
+- [x] Phase 5 (`k8s-101-workshop` prevention) — handled by a separate session; merged there
+      via PR #104 on 2026-08-17. `PATH_TITLE_RE` is deliberately disabled in that repo (its
+      pattern matches two ordinary existing tab titles), with a do-not-re-enable note.
 - [x] **Flatten non-path tab groups in the handouts too — done 2026-08-17.** Found during
       post-merge verification of the PDFs: the generator flattened `pathtabs` correctly but
       left the remaining tab groups as tabs, and relearn's print CSS renders only the
@@ -447,9 +488,22 @@ restoring — `HEAD` lints clean at 14 pages.
       five levels after `demote_headings`, and these labels do not belong in the TOC.
       Verified: 0 tab groups and 0 hidden panels in both print HTML files, PDFs grew 22→23
       and 26→28 pages, and "Follow the logs" plus every expected-output block is on paper.
-- [ ] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
+- [x] Drop the obsolete `repoConfig.json` shortcut item from Phase 3 — Jeff's decision that
       handouts live in the reference section only makes a sidebar shortcut unwanted, so the
-      `pageRef` limitation blocks nothing.
+      `pageRef` limitation blocks nothing. Closed as not-needed 2026-08-17.
+- [x] **Merged and published 2026-08-17.** `ai-101` PR #16 and `k8s-101-workshop` PR #104
+      both merged to `main`; Pages deploy and the Handout-PDF workflow ran green on both, and
+      the published pages were spot-checked over HTTP (200s, correct rewritten hrefs). Worth
+      recording for the next reader: while #16 was open, `main` moved (Robert's
+      `08acc34 fix helm chart values.yaml ui settings`, adding a `NodePort 30280` UI service
+      to `values-lab3/4.yaml`). Merged forward, rebuilt (42 pages, 0 WARN), and confirmed the
+      change makes the chart *match* content that already documented NodePort 30280 — so the
+      Lab 3/4 k8s instructions were correct before the chart was.
+- [ ] `errorignore` as the cheaper alternative to `pageRef` upstream: relearn's
+      `urlErrorReport.gotmpl` already honors `site.Params.errorignore` (a list of regexes
+      matched against the URL). `hugo.jinja` emits neither it nor `pageRef`, and has no
+      arbitrary-params passthrough, so either one is an upstream CentralRepo change — but
+      `errorignore` is a one-line template addition where `pageRef` needs menu-shape changes.
 
 ## Risks / Open Questions
 
