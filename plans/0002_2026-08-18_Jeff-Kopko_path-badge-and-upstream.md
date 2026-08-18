@@ -2,7 +2,7 @@
 Date: 2026-08-18
 Owner: Jeff Kopko
 Slug: path-badge-and-upstream
-Status: Proposed
+Status: Approved
 Supersedes: none
 Superseded-By: none
 Plan File: plans/0002_2026-08-18_Jeff-Kopko_path-badge-and-upstream.md
