@@ -77,12 +77,16 @@ Checkout is at `~/pythonProjects/CentralRepo` and already in the VS Code workspa
 **Branch facts, verified 2026-08-18 — the naming is actively misleading:**
 `prreviewJune23` **is** the dev branch (`image-build-push-dev.yaml:6` triggers on it *and*
 `Dockerfile:24` bakes `#prreviewJune23` into the dev stage), and the local checkout sits on it.
-But it is **4 commits behind `origin/main`** (last commit 2026-07-16 vs main's 2026-07-20), so it
-is *not* a superset of prod. `prreviewJuly23` looks newer and is a decoy: 13 behind `main`, last
-commit 2026-06-11, referenced by no workflow and no Dockerfile stage. Consequences: (1) branch off
-`origin/main`; (2) pushing to `prreviewJune23` to test would publish a dev image whose CentralRepo
-is 4 commits stale in unrelated ways, so `LOCAL=true` is the real verification path, not the dev
-image (A6).
+It is **4 commits behind `origin/main` in history but byte-identical in content** — its tip
+`0fe0ea0` is an ancestor of `main` (merged as `032a8af`), and `git diff origin/prreviewJune23
+origin/main` is empty. So the dev and prod images carry the same CentralRepo today; the divergence
+is history-only. `prreviewJuly23` is a genuine decoy: 13 behind `main`, last commit 2026-06-11,
+referenced by no workflow and no Dockerfile stage.
+Consequences: (1) branch off `origin/main` — same content, correct history, no merge commit needed
+later; (2) `LOCAL=true` is still the verification path for A6, but for a plainer reason than
+staleness — it builds from the working tree, so it tests exactly what the PR contains, whereas
+testing via `image_variant: dev` would require pushing the work to `prreviewJune23` and publishing
+a dev image just to read the result.
 
 - [ ] A1. Add `layouts/shortcodes/pathtabs.html` + `layouts/shortcodes/pathtab.html`,
       upstreamed from `ai-101` and extended with the badge. **This is the only copy that will

@@ -68,8 +68,8 @@ two Plan Changes entries — first the sequencing call, then the upstream-only m
 
 ### Recon — CentralRepo write access and branch shape
 - Notes: admin on the repo; `main` requires only `ci/jenkins/build-status`, 0 approvals,
-  `strict: false`. The local checkout sits on `prreviewJune23`, **4 commits behind
-  `origin/main`** — so new work branches off `origin/main`. Recent PRs all merge a long-lived
+  `strict: false`. The local checkout sits on `prreviewJune23`, 4 commits behind
+  `origin/main` — so new work branches off `origin/main`. Recent PRs all merge a long-lived
   `prreviewJune23` into `main`, which is also the branch the *dev* image builds from
   (`Dockerfile:24`), giving a real pre-merge test path via `image_variant: dev`.
 
@@ -97,14 +97,23 @@ two Plan Changes entries — first the sequencing call, then the upstream-only m
 - What I'm doing: verifying which branch is actually "dev" before planning a test path.
 - Notes: `prreviewJune23` is dev, confirmed in two independent places
   (`image-build-push-dev.yaml:6` trigger, `Dockerfile:24` `ADD …#prreviewJune23`). Jeff's
-  recollection was right. But the branch topology is a trap:
-  - `prreviewJune23` is **4 commits behind `origin/main`** (2026-07-16 vs 2026-07-20).
-  - `prreviewJuly23` sounds newer and is a decoy: 13 behind `main`, last commit **2026-06-11**,
-    referenced by no workflow and no Dockerfile stage.
-  So the published dev image is not a superset of prod, and testing a main-bound change by pushing
-  to `prreviewJune23` would publish an image carrying 4 commits of unrelated staleness. That kills
-  the `image_variant: dev` verification idea and leaves `LOCAL=true` as the only honest pre-merge
-  test. Recorded in the plan under WS-A rather than left as tribal knowledge.
+  recollection was right.
+  - `prreviewJune23` is 4 commits behind `origin/main` **in history only — the trees are
+    byte-identical.** Its tip `0fe0ea0` is an ancestor of `main` (merged as `032a8af`), and
+    `git diff --quiet origin/prreviewJune23 origin/main` passes. Dev and prod images therefore
+    carry identical CentralRepo content today.
+  - `prreviewJuly23` is the real decoy: 13 behind `main`, last commit **2026-06-11**, referenced
+    by no workflow and no Dockerfile stage.
+- **Correction to my own earlier read, which I had already told Jeff:** I reported the dev image as
+  "4 commits stale relative to prod", inferred from `rev-list --left-right --count` plus commit
+  dates without ever checking the trees. Content-wise that was wrong. `LOCAL=true` remains the
+  right A6 path, but for the plain reason that it builds from the working tree and so tests exactly
+  what the PR contains — not because dev is stale. Plan text updated; the decision did not change,
+  only its justification.
+- Lesson learned: `rev-list --left-right --count` measures history, not content. When the question
+  is "is this branch behind in a way that matters", `git diff --quiet X Y` is the actual question.
+  Two branches can be 4 commits apart and identical, which is exactly what a merge-back workflow
+  produces.
 - Also: CentralRepo is already in `python.code-workspace:4`, so no workspace change needed.
 
 ## Commands (high-level)
@@ -159,9 +168,10 @@ two Plan Changes entries — first the sequencing call, then the upstream-only m
     than originally written down — worth noticing when a rationale outlives its argument.
 - Option: verify the CentralRepo changes by pushing to `prreviewJune23` and using the published
   dev image (`image_variant: dev`).
-  - Why rejected: that branch is 4 commits behind `main`, so the resulting image would differ from
-    the eventual prod image in ways unrelated to this change. `LOCAL=true` builds from the working
-    tree and is exact.
+  - Why rejected: it requires pushing the work onto a shared long-lived branch and publishing a dev
+    image just to read a result, when `LOCAL=true` builds from the working tree and is exact.
+    (My first reason — "that branch is 4 commits stale" — was wrong; see the correction above. The
+    option is still rejected, on the cost of the round-trip rather than on staleness.)
 - Option: push `ai-101`'s `static.yml` upstream verbatim, as plan 0001's follow-up worded it.
   - Why rejected: `ai-101` has no Dockerfile and pulls the image from ECR; CentralRepo's own
     workflow builds it with `docker build --target=prod`. Verbatim would break CentralRepo's
