@@ -10,10 +10,16 @@ recoverable from the commits.
 
 ## Milestones
 - [x] M0. Establish that no badge was ever implemented — the complaint is accurate
-- [ ] M1. WS-A: `pathtabs` + badge, `errorignore`/`deploymentPaths`, `static.yml` split upstream
-- [ ] M2. WS-B: badge shipped in `ai-101` on the current prod image; doc corrections
-- [ ] M3. WS-C: `k8s-101` path-lint trigger, `errorignore` staged, routing text, preflight blocks
-- [ ] M4. S2: CentralRepo `main` merged, prod image rebuilt, `k8s-101` re-verified at 0 WARN
+- [ ] M1. WS-A: `pathtabs` + badge, `errorignore`/`deploymentPaths`, `static.yml` split, **and
+      author-facing docs** upstream in CentralRepo — the only copy of the shortcode anywhere
+- [ ] M2. S2: CentralRepo `main` merged, prod image rebuilt, digest confirmed moved
+- [ ] M3. WS-B: `ai-101` local `pathtab*.html` **deleted**, `deploymentPaths` added, badge live,
+      doc corrections
+- [ ] M4. WS-C: `k8s-101` path-lint trigger, `errorignore` effective, routing text, preflight
+      blocks, re-verified at 0 WARN
+
+Milestone order changed mid-session: M2 (the gate) moved ahead of both repo workstreams. See the
+two Plan Changes entries — first the sequencing call, then the upstream-only mandate.
 
 ## Commentary Stream
 
@@ -67,6 +73,40 @@ recoverable from the commits.
   `prreviewJune23` into `main`, which is also the branch the *dev* image builds from
   (`Dockerfile:24`), giving a real pre-merge test path via `image_variant: dev`.
 
+### Direction change — upstream-only, and documentation as a deliverable
+- What I'm doing: reworking the plan so CentralRepo holds the *only* copy of `pathtabs`, and so
+  the session's how-to knowledge lands in CentralRepo docs rather than only in plan files.
+- Why: Jeff's call — "DO NOT finalize with a local shortcode in only ai-101 repo."
+- Notes: he is right, and the reason is specifically `local_copy.sh:3-4`. A hand-synced copy is
+  not merely redundant here; the local one *wins silently*, so the moment the two drift the
+  upstream fix stops being the thing that renders and nothing tells you. Two nastier consequences
+  I had underweighted:
+  1. Deleting the local copy is a wholesale implementation **swap**, not an additive change. Every
+     difference between `ai-101`'s version and the upstream one lands in one commit. That drove a
+     verification change (B4 now checks unchanged behaviors, not just the new banner).
+  2. A global shortcode must not carry `ai-101`'s vocabulary. Its inline `docker`/`k8s` default and
+     hardcoded `groupid "deploy-path"` were fine in one repo and are traps upstream — another
+     workshop would silently inherit `ai-101`'s paths. Both become parameters, and a missing
+     `deploymentPaths` becomes an `errorf`. That in turn forces `deploymentPaths` into `ai-101`'s
+     `repoConfig.json` in the same commit as the deletion.
+- Cost, recorded honestly: the plan loses all its front-end parallelism and its one property that
+  produced a visible result quickly. Wall-clock goes from `max(A,B) + rebuild + C` to
+  `A + rebuild + max(B,C)`.
+
+### Recon — CentralRepo branch shape, corrected
+- What I'm doing: verifying which branch is actually "dev" before planning a test path.
+- Notes: `prreviewJune23` is dev, confirmed in two independent places
+  (`image-build-push-dev.yaml:6` trigger, `Dockerfile:24` `ADD …#prreviewJune23`). Jeff's
+  recollection was right. But the branch topology is a trap:
+  - `prreviewJune23` is **4 commits behind `origin/main`** (2026-07-16 vs 2026-07-20).
+  - `prreviewJuly23` sounds newer and is a decoy: 13 behind `main`, last commit **2026-06-11**,
+    referenced by no workflow and no Dockerfile stage.
+  So the published dev image is not a superset of prod, and testing a main-bound change by pushing
+  to `prreviewJune23` would publish an image carrying 4 commits of unrelated staleness. That kills
+  the `image_variant: dev` verification idea and leaves `LOCAL=true` as the only honest pre-merge
+  test. Recorded in the plan under WS-A rather than left as tribal knowledge.
+- Also: CentralRepo is already in `python.code-workspace:4`, so no workspace change needed.
+
 ## Commands (high-level)
 - `git log/status/rev-list` across `ai-101`, `k8s-101-workshop`, `CentralRepo` — confirm 0001's
   end state and how far the local CentralRepo branch has drifted
@@ -106,6 +146,22 @@ recoverable from the commits.
   - Why rejected: for `pathtabs` printing both panels is actively wrong — showing a reader
     both the Docker and the Kubernetes steps is the exact failure the per-path handouts exist
     to prevent. Separate question, separate blast radius.
+- Option: keep a hand-synced copy of `pathtabs.html` in `ai-101` alongside the upstream one, so
+  the badge ships on the *current* prod image instead of waiting for a rebuild. This is what the
+  plan said until Jeff overruled it.
+  - Why rejected: `local_copy.sh:3-4` makes the local copy win silently, so drift is not a
+    cosmetic duplication problem — it is a "the upstream fix you just merged does nothing and
+    nothing tells you" problem. A comment and a follow-up checkbox are not a synchronization
+    mechanism.
+  - Lesson learned: "ships sooner" was doing a lot of work in that decision, including propping up
+    the choice to emit CSS/JS from inside the shortcode. When the deadline pressure was removed the
+    in-shortcode decision still held (self-containment, clobber-safety) but for different reasons
+    than originally written down — worth noticing when a rationale outlives its argument.
+- Option: verify the CentralRepo changes by pushing to `prreviewJune23` and using the published
+  dev image (`image_variant: dev`).
+  - Why rejected: that branch is 4 commits behind `main`, so the resulting image would differ from
+    the eventual prod image in ways unrelated to this change. `LOCAL=true` builds from the working
+    tree and is exact.
 - Option: push `ai-101`'s `static.yml` upstream verbatim, as plan 0001's follow-up worded it.
   - Why rejected: `ai-101` has no Dockerfile and pulls the image from ECR; CentralRepo's own
     workflow builds it with `docker build --target=prod`. Verbatim would break CentralRepo's
@@ -121,10 +177,14 @@ recoverable from the commits.
 - Risk: reporting `k8s-101` as 0 WARN on the strength of the `repoConfig.json` edit, before the
   image carries the `hugo.jinja` change that reads the key.
   - Mitigation: WS-C's stated end state is "1 WARN, fix staged". M4 is a separate milestone.
-- Risk: `ai-101`'s local and upstream `pathtabs.html` drift apart, since the local copy wins
-  silently.
-  - Mitigation: author once in WS-A, copy verbatim (S1); the deletion trigger is a plan
-    follow-up and a `CLAUDE.md` line, not memory.
+- Risk: ~~`ai-101`'s local and upstream `pathtabs.html` drift apart~~ — eliminated, not mitigated.
+  Upstream-only means there is no second copy. This is the clearest argument for Jeff's call: the
+  previous mitigation was "remember to copy it verbatim", which is not a mitigation.
+- Risk: nothing user-visible ships until the prod image rebuilds, since the local-copy escape
+  hatch is gone.
+  - Mitigation: A6's `LOCAL=true` build renders the badge locally, so it is demonstrable by
+    screenshot pre-merge; `image-build-push-prod.yaml` is manually dispatchable if the push
+    trigger misfires.
 - Risk: `ai-101` `main` moves mid-PR (Robert pushes directly; it moved twice during plan 0001).
   - Mitigation: merge forward and rebuild before merging. Do not read a pending
     `Lacework (IAC)` / `UNSTABLE` as a failure — the only required check is
