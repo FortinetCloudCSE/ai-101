@@ -223,6 +223,41 @@ a dev image just to read the result.
 - [ ] C3. Fix the beginner/experienced routing text whose section numbers do not match the
       actual nav. Report the proposed wording for review before committing — this is content
       judgment, not a mechanical edit.
+      **Investigated 2026-08-18. Both sentences are in one file,
+      `content/02_quickstart_overview_faq/_index.md` (lines 27 and 31), and both are live on the
+      published site.** Root cause: commit `8de4576` ("update task numbers and cleanup")
+      renumbered the hands-on section 3 → 2 and HTML-commented out the old AKS section
+      (`_index.md:14-17`), without updating the guidance paragraph. So:
+      - `:27` promises sections `1, 2, 3.1, 3.2, 3.3`. The page's own agenda has exactly two
+        numbered sections. No `3.x` exists anywhere, in content or sidebar.
+      - `:31` — **the harmful one** — says an experienced reader "may skip section 2 and progress
+        directly from section 1 to section 3". Post-renumbering, section 2 *is* the entire lab
+        (install, deploy, scale, deep dive), and section 3 does not exist. It tells the reader to
+        skip everything and go nowhere. The AKS detour it originally meant survives only as
+        `*.md.txt` under `02_02_k8s_overview/`, which Hugo does not build.
+      Proposed replacements name sections and link them instead of numbering them — hardcoding
+      different numbers just resets the clock. Use `/`-rooted markdown content refs, **not
+      `relref`**: `grep -rn 'relref' content/` is 0 hits in this repo and its `CLAUDE.md`
+      mandates `/`-rooted refs. Do not wrap them in `{{< notice >}}` (the dominant form here,
+      8 vs 3) — angle-bracket notices do not markdown-render their inner content, so the links
+      would break; and adding a notice changes presentation rather than fixing a wrong claim.
+      Judgment calls made, flagged rather than buried:
+      - "then take 3.3 with extend hours" — the operational meaning of "extend hours" is
+        recorded nowhere in the repo, so the replacement drops the claim ("if time allows")
+        rather than restating something unverified.
+      - Keep the experienced-reader bullet but reframe it from "skip" to "move quickly through",
+        rather than deleting it. Deleting is smaller and defensible; signposting is worth
+        keeping. Quickstart is genuinely non-skippable — it runs the provisioning form and
+        Terraform for the two VMs every later task needs.
+      Link targets verified present: `02_01_quickstart`, `03_01_k8sinstall`, `03_02_k8sindepth`.
+      **Adjacent bug, same class, NOT in C3's scope — decide before committing C3:** the agenda's
+      `2.1/2.2/2.3` headings collide with the sidebar's `2.1/2.2`. Agenda `2.1`/`2.2` are *tasks
+      inside* `03_01_k8sinstall`; sidebar `2.1` is that whole section and `2.2` is
+      `03_02_k8sindepth`. So the surviving numbers are also wrong and will re-break the same way.
+      Fixing it means stripping numbers from the agenda headings *and* from two section
+      `linkTitle`s, which changes student-visible sidebar labels — wider than "routing text".
+      Recommend bundling it, since leaving it guarantees a repeat; default is to leave it and
+      log a follow-up.
 - [ ] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
       committing, and every command must be lab-accurate.
 - [ ] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
