@@ -260,6 +260,40 @@ a dev image just to read the result.
       log a follow-up.
 - [ ] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
       committing, and every command must be lab-accurate.
+      **Investigated 2026-08-18. 7 blocks proposed across 8 insertion points**, every command and
+      expected-output string sourced to a `file:line` in the repo. Cluster shape sourced, not
+      assumed: 2 nodes, `node-master` / `node-worker`, `v1.30`, Calico `v3.28.2`
+      (`scripts/install_kubeadm_masternode.sh:20,21,25`, `install_kubeadm_workernode.sh:17`).
+      Presentation decisions, both load-bearing:
+      - **Use `{{% notice %}}`, not `{{< notice >}}`,** even though angle-bracket is the dominant
+        form here (6 vs 1). Relearn's `notice.html` passes `.Inner` through raw, so a fenced code
+        block inside `{{< notice >}}` renders as literal backticks. The one existing notice in
+        this repo that contains a code fence is the percent form
+        (`02_01_03_terraform/index.md:35-44`) — copy that.
+      - **Do not use `tabs`.** All 33 groups in this repo are a command-vs-Expected-Output axis,
+        which hides the expected output behind a click — wrong for a preflight, where pass/fail
+        must be visible at a glance. A bare `tabs` group also resets to its first tab on load.
+      Highest-value block, and a real live defect: **`7_k8sappendix/index.md` never creates a
+      `kubernetes-bootcamp` deployment**, but every command from `:39` on selects
+      `-l app=kubernetes-bootcamp` — and Task 6's cleanup (`03_02_06_exposingapp/index.md:864`)
+      has already deleted it. Today a student gets empty output from the whole page with no
+      indication why.
+      Pages deliberately left without a block: `02_01_02_cloudshell` (portal clicks only),
+      `03_02_02_configmap` (creates its own objects; only prereq already covered one page
+      earlier), `03_02_07_cleanup` (single `terraform destroy`), `test/index.md`, all `_index.md`
+      section pages.
+      `kubectl`'s empty-list string `No resources found in default namespace.` is used in three
+      blocks and is not present anywhere in the repo — it is kubectl's standard message for
+      namespaced resources and is correct for v1.30, but note it goes to **stderr**, not stdout.
+- [ ] C4a. **`03_02_06_exposingapp` gets no preflight block, on purpose — it has a version-conflict
+      defect that must be decided first.** The page installs MetalLB `v0.14.3` (`:159`), Kong
+      `v2.10.0` (`:311`) and cert-manager `v1.3.1` (`:462`), while
+      `scripts/deploy_application_with_hpa_masternode.sh` has *already* installed MetalLB
+      `v0.15.2` (`:27`), Kong `v3.5.0` (`:52`) and cert-manager `v1.18.2` (`:105`) in an earlier
+      task. A preflight can detect the collision (`kubectl get svc kong-proxy -n kong` at `:223`,
+      `kubectl get ipaddresspool -n metallb-system` at `:196`) but the *remedy* — skip the steps,
+      or run Task 2's "Cleanup Addons" and downgrade — is a content decision not derivable from
+      the repo. Decide, then add the block. Do not guess.
 - [ ] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
       build. Target 48 pages / **0 WARN**. If it still reads 1 WARN, A2 did not take — debug
       that before merging, do not merge and explain it away.
@@ -390,6 +424,27 @@ Two carve-outs:
       scope here — flagged because it makes CentralRepo's dev image untrustworthy as a test
       target for anything main-bound.
 - [ ] `k8s-101-workshop`: dead AKS references — still deferred by decision.
+- [ ] `k8s-101-workshop` content bugs found while investigating C3/C4, all pre-existing, all out of
+      scope here. Each is independently checkable and none blocks this plan:
+      - `03_01_03_HPA_demo/index.md:129-138` — the "helm version" readiness tab expects helm
+        `v4.1` and `KubeClientVersion:"v1.35"`, against a `v1.30` cluster. Nothing in `scripts/`
+        or `content/` installs helm at all, so either the tab is stale or helm arrives from
+        outside the repo. Unresolved.
+      - `03_01_03_HPA_demo/index.md:145-149` — the "5.Ingressclass" check expects
+        `No resources found`, but the script that same page runs installs Kong
+        (`deploy_application_with_hpa_masternode.sh:52`), which registers a `kong` IngressClass
+        (visible at `03_02_06_exposingapp/index.md:343-344`). The stated expectation is wrong.
+      - `03_02_06_exposingapp/index.md:100,105` curl NodePort `30913` on the public FQDN, but
+        `terraform/azurevm_linux.tf` defines no NSG and no `security_rule` — reachability depends
+        on a subnet NSG in the pre-created resource group, outside this repo. Undocumented
+        external dependency.
+      - `02_01_02_cloudshell/index.md:46` tells the student to pick resource group
+        `K8sXX-K8s101-workshop`, while `terraform/azurevm_linux.tf:9` builds
+        `<username>-k8s101-workshop` — different case. Azure's case handling here was not
+        verified.
+      - The agenda headings in `02_quickstart_overview_faq/_index.md` number `2.1/2.2/2.3` as
+        *tasks inside* `03_01_k8sinstall`, colliding with the sidebar where `2.1` is that whole
+        section and `2.2` is `03_02_k8sindepth`. Same bug class as C3 and will re-break it.
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster.
 
 ## Risks / Open Questions
