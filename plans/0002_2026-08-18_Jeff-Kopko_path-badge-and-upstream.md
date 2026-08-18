@@ -76,14 +76,31 @@ the work spans three repos: `ai-101`, `CentralRepo`, `k8s-101-workshop`.
       upstreamed from `ai-101` and extended with the badge. Badge design (approved):
       a banner above the tab nav reading `🔒 Your path: <NAME>` + `Locked in — every lab page
       follows this choice.`, where `<NAME>` is **live text** that updates on switch.
+      - Markup: `pathtabs.html` wraps the existing `partial "shortcodes/tabs.html"` call in
+        `div.pathlock` and prepends `div.pathlock__banner`. The theme partial is untouched.
+      - **Stop passing `title` through to the theme partial.** The authored title becomes the
+        banner's label instead, otherwise "Your path" renders twice (banner + relearn's
+        `.tab-nav-title`). The partial already emits `&#8203;` for an empty title
+        (`tabs.html:65`), so nav layout is preserved.
       - CSS and JS are emitted **by the shortcode itself**, once per page, guarded with
         `.Page.Store`. Rationale under Decisions.
-      - JS is a `MutationObserver` on `.tab-panel[data-tab-group="deploy-path"]` watching
-        `class` changes on `.tab-nav-button`; it reads the active button's text and writes it
-        into the banner. No wrapping of `switchTab`, no writes to `localStorage`.
-      - Degrades to the server-rendered first-tab name with JS off.
-      - `@media print` hides the banner — handouts flatten `pathtabs` in markdown, so the
-        banner would be noise on paper.
+      - JS: a `MutationObserver` on `.tab-panel[data-tab-group="deploy-path"]` watching
+        `class` on `.tab-nav-button`, **plus an initial read at install time**. The initial read
+        is not optional — `restoreTabSelections()` (`theme.js:1835`) may already have run, and
+        the observer cannot see a mutation that happened before it was installed. Together they
+        cover both orderings. No wrapping of `switchTab`, no writes to `localStorage`.
+      - Accent color: `rgba(var(--theme-color), …)`. `--theme-color` is a raw `r,g,b` triplet
+        set per `themeVariant` by CentralRepo's `assets/css/theme-*.css`, so the banner picks up
+        the right brand color in all 9 variants with no `color-mix` and no per-variant rules.
+        For `ai-101` (`themeVariant: Workshop`) that resolves to Fortinet red `218,41,28`.
+      - Icon: `<i class="fa-fw fas fa-lock">`. FontAwesome is vendored in the theme
+        (`assets/fonts/fontawesome/webfonts/fa-solid-900.woff2`) and the theme itself uses
+        `fas fa-home`, so no new dependency.
+      - `aria-live="polite"` on the live value so a screen reader announces the switch.
+      - Degrades to the server-rendered first-tab name with JS off (Hugo marks `$idx == 0`
+        active, so the static text always matches what is displayed).
+      - `@media print` hides the banner — handouts flatten `pathtabs` in markdown, so it would
+        be noise on paper.
 - [ ] A2. `scripts/templates/hugo.jinja`: emit two new optional params inside `[params]`,
       before `[params.include]` at `:201`.
       - `errorignore` (list of regexes) — relearn's `urlErrorReport.gotmpl:5` already honors
@@ -130,44 +147,56 @@ the work spans three repos: `ai-101`, `CentralRepo`, `k8s-101-workshop`.
       "delete the local copies once the prod image carries them" trigger.
 - [ ] B6. PR → `main`.
 
-### WS-C — k8s-101-workshop
+### WS-C — k8s-101-workshop. **Gated on S2 — do not open this PR until the rebuilt prod image is live.**
 
 - [ ] C1. Commit the already-written `push: branches: [main]` trigger in `path-lint.yml`.
+      (Written already; held with the rest of WS-C so this repo gets one PR, not two.)
 - [ ] C2. Add `errorignore` to `scripts/repoConfig.json` targeting the Workshop PDF shortcut.
-      **Inert until A2 lands on CentralRepo `main` and the prod image rebuilds** — the key is
-      simply dropped by the current `hugo.jinja`. Land it anyway so the WARN clears itself on
-      the next image refresh; state the sequencing plainly rather than claiming a fix.
+      Only meaningful once A2 is on CentralRepo `main` and the prod image has rebuilt — the key
+      is silently dropped by the current `hugo.jinja`. Sequenced after S2 so the WARN is
+      actually gone when this lands, rather than staged.
 - [ ] C3. Fix the beginner/experienced routing text whose section numbers do not match the
       actual nav. Report the proposed wording for review before committing — this is content
       judgment, not a mechanical edit.
 - [ ] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
       committing, and every command must be lab-accurate.
-- [ ] C5. Verify: `python3 scripts/lint_paths.py`, container build. Expect 48 pages and **1
-      WARN before** the image rebuild, **0 after**. Do not report the WARN as fixed on the
-      strength of the repoConfig edit alone.
+- [ ] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
+      build. Target 48 pages / **0 WARN**. If it still reads 1 WARN, A2 did not take — debug
+      that before merging, do not merge and explain it away.
 - [ ] C6. PR → `main`.
 
 ### Sync points
 
 - [ ] S1. A1 → B2. The shortcode is authored once in WS-A and copied verbatim into `ai-101`.
       Byte-identical, or the local copy silently diverges from upstream forever.
-- [ ] S2. A2 + merge to CentralRepo `main` → prod image rebuild → re-run `k8s-101-workshop`'s
-      build to confirm 0 WARN. This is the only step that cannot complete in one sitting.
+- [ ] S2. **Hard gate.** A merged to CentralRepo `main` → `image-build-push-prod.yaml` runs →
+      new `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest` in ECR → *then* WS-C starts.
+      Confirm the image actually moved (compare digest, not just a green workflow) before
+      treating C2 as effective.
 
 ## Implementation Method
 
-**Workflow fan-out, then inline review.** WS-A, WS-B and WS-C touch three different repos with
-one real dependency (S1), so wall-clock is the slowest branch rather than the sum. Each
-workstream gets its own branch in its own repo; no worktree isolation needed since the
-concurrency is across repos, not within one.
+**Fan-out A ∥ B, then serialize C behind the image rebuild.** A and B touch different repos and
+share only S1, so they run concurrently; each gets its own branch in its own repo, and no
+worktree isolation is needed since the concurrency is across repos rather than within one.
+C waits on S2 — that is now a hard gate, not an optimization.
 
-Two carve-outs:
+Three carve-outs:
 - A1's shortcode is authored **first and once**, because B2 is a verbatim copy of it.
 - C3 and C4 are content judgment. Agents draft; every diff is reviewed inline before any PR
   opens. No auto-commit of prose that describes lab steps.
+- The wait at S2 is dead wall-clock (a CentralRepo merge plus an ECR image build). B ships and
+  is verifiable during it, so the pause is not idle overall — but WS-C should not be started
+  early "to save time". Starting it early is exactly what produces an unverifiable WARN claim.
 
 ## Plan Changes
-- (none)
+- **2026-08-18, before approval — WS-C is now gated on WS-A shipping, not run alongside it.**
+  Jeff's call: finish the CentralRepo work *and* let the prod image rebuild before re-pushing
+  `k8s-101-workshop`, so the WARN actually clears in one pass instead of landing as a staged
+  edit that reads as a no-op. Consequences: WS-C moves behind S2 rather than in front of it;
+  WS-C's end state becomes 48 pages / **0 WARN** instead of "1 WARN, fix staged"; and the
+  fan-out narrows to A ∥ B, with C serialized after. Costs wall-clock, buys a verifiable
+  result. The three-way fan-out this plan originally described is gone.
 
 ## Decisions & Commentary
 
@@ -232,9 +261,11 @@ Two carve-outs:
 
 ## Risks / Open Questions
 
-- **`k8s-101-workshop`'s WARN does not go to zero in this plan's own timeframe.** It needs the
-  CentralRepo merge *and* the prod image rebuild. The honest end state for WS-C is "1 WARN,
-  fix staged" until S2 completes.
+- **WS-C now blocks on an ECR image build finishing.** Sequencing it after S2 (Jeff's call) is
+  what makes the WARN verifiable, but it means the plan cannot finish if the prod image build
+  fails or the ECR push is throttled. Mitigation: `image-build-push-prod.yaml` is dispatchable
+  manually, and the local `LOCAL=true` dev image proves the `hugo.jinja` change independently
+  of ECR — so a stuck image build delays C, it does not invalidate A.
 - **A CentralRepo `main` merge auto-rebuilds and republishes the prod image every workshop repo
   builds against.** That is the intended mechanism, but the blast radius of A1–A4 is all ~12
   repos, not just these two. Verify with the local `LOCAL=true` dev image first (A6), and
