@@ -50,7 +50,7 @@ Per-lab configuration lives in that lab's `values-labN.yaml` file.
 | `POISON_DESC` | `false` | Activates the poisoned `search_web` description for the Lab 4 advanced demo. Requires `ENABLE_EXTRA_TOOL=true`. |
 | `OLLAMA_MODEL` | `qwen2.5:3b` | Model pulled by the Ollama entrypoint at startup. |
 
-{{< pathonly path="docker" >}}
+{{% pathonly path="docker" %}}
 ## Compose profiles
 
 | Profile | Services | Used in |
@@ -59,7 +59,7 @@ Per-lab configuration lives in that lab's `values-labN.yaml` file.
 | `lab2` | ollama + agent (hardcoded) + ui | Lab 2 |
 | `lab3` | ollama + agent-mcp + mcp-server + ui-mcp | Lab 3 |
 | `lab4` | same as lab3 | Lab 4 |
-{{< /pathonly >}}
+{{% /pathonly %}}
 
 ## API endpoints (agent)
 
