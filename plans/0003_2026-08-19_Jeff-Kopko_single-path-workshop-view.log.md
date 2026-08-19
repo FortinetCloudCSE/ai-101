@@ -12,8 +12,8 @@ are choices the commits show the outcome of but not the reasoning for.
 - [x] M0. Phase 0 gate: PR #71 merged, prod image rebuilt
 - [x] M1. Phase 1 implemented — P1.1–P1.5 as one commit in four CentralRepo files
 - [x] M2. Phase 1 verified to the limit of this host (no browser available)
-- [ ] M3. CentralRepo PR opened and merged; prod image rebuilt a second time
-- [ ] M4. `ai-101` PR #19 merged, so `deploymentPaths` exists and the gate is actually live
+- [x] M3. CentralRepo PR #72 merged (`fca05f5`); prod image rebuilt and the gate verified inside it
+- [x] M4. `ai-101` PR #19 merged (`895e2c7`) and `k8s-101` #107 (`f3591d8`); gate verified live on Pages
 - [ ] M5. Phases 2–4 fanned out, Phase 5 sync point
 
 ## Commentary Stream
@@ -56,6 +56,37 @@ are choices the commits show the outcome of but not the reasoning for.
   duplicates one-per-block was producing. Re-measured 911 → 913.
 - Lesson: a shortcode must never emit reader-facing prose in a relearn site. Two invisible surfaces
   consume `.Content` before a human ever reads it.
+
+### Merge day — the deploy that didn't happen
+- What I'm doing: landing all three PRs in order (CentralRepo #72 → image rebuild → `ai-101` #19 →
+  `k8s-101` #107), per Jeff's go-ahead.
+- Notes: #72 merged as `fca05f5`, the prod image rebuilt, and the gate is confirmed *inside* the pulled
+  image — 18 `data-deployment-path` hits in `custom-header.html`, `pathgate` present in `pathtabs.html`,
+  `MutationObserver` gone. Hugo in the new image is 0.165.0 against 0.164.0 locally, which is the
+  unpinned-base-image consequence flagged in the risks, arriving exactly as predicted.
+- Notes: `docker pull` reported "Image is up to date" with a digest that did **not** contain the change.
+  Local Docker was serving a cached manifest. `docker buildx imagetools inspect` showed the registry
+  index at a different digest; pulling by that digest gave the real image. Do not trust `docker pull` +
+  `docker inspect` alone to prove a floating tag moved.
+- **Findings: `ai-101` #19 merged and nothing deployed.** No failed run, no annotation — no run at all.
+  Cause: GitHub concatenates every squashed commit's message into the squash body, the plan/log commits
+  all carry `[skip ci]` by convention, and Actions honours it anywhere in the merge commit message.
+  `k8s-101` #107 was unaffected because its branch had no `[skip ci]` commits.
+- Decision: recovered with `gh workflow run static.yml --ref main`. Promoted to `CLAUDE.md` as a
+  post-merge check, because the failure mode is the *absence* of a run and it is indistinguishable from
+  success unless you go looking.
+
+### Live verification, after the deploy
+- Notes: first probes returned 404 bodies that still contained gate CSS, because the 404 page also
+  renders `custom-header.html` — so the counts looked plausible while proving nothing. Published URLs
+  here are lowercase with a `.html` suffix and no trailing-slash directories (`/02inference/1_lab.html`);
+  read `sitemap.xml` rather than guessing from content paths.
+- Notes: on the real URLs everything holds. Pages with blocks carry balanced `.pathgate[data-path]`
+  wrappers, exactly **one** chooser, one `<noscript>` warning and one switcher; the page-scoped
+  `1_prereqs_docker.html`, which has no `pathtabs` block, carries the switcher and no gate markup —
+  which is the P1.4 requirement. The gate CSS sits at offset 12291 and the initialiser at 16655 with
+  `<body>` at 24834, synchronous, so pre-paint is confirmed on the live site. `meta description` is real
+  page prose again. `MutationObserver` appears nowhere.
 
 ## Commands (high-level)
 - `docker run --rm -v <workshop>:/home/UserRepo -v <worktree>:/home/CentralRepo fortinet-hugo:latest build`

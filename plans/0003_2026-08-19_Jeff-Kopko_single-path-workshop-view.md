@@ -332,8 +332,7 @@ Landed as CentralRepo `56747bd` on branch `pathtabs-upstream`, one commit across
       appear and it must announce itself, because showing both silently is the exact reported failure.
       Both live in `content-header.html`, not the shortcode — see Plan Changes.
 - [x] P1.6. `ai-101` `scripts/repoConfig.json`: `deploymentPaths` (also plan 0002 B2 — land it once).
-      In PR #19; **Phase 1 is not live for `ai-101` until that merges**, since the whole mechanism
-      no-ops without the param.
+      Merged in PR #19 (`895e2c7`).
 - [x] P1.7. Verify — done except the three browser-level criteria, which this host cannot check (no
       Chrome/Chromium installed). What passed:
       - `ai-101` 42 pages / 0 WARN.
@@ -351,6 +350,14 @@ Landed as CentralRepo `56747bd` on branch `pathtabs-upstream`, one commit across
       Not verified here: first-paint order, the no-choice blocked state, and the JS-disabled state.
       All three are verified by construction and by reading the emitted CSS; the PDF render itself can
       only be proven by CI's `handout-pdf.yml`.
+- [x] P1.8 (added at implementation). Verified on the **published** site after all three merges. Gate
+      CSS at byte 12291 and the initialiser at 16655 with `<body>` at 24834, synchronous — pre-paint
+      holds in production. Pages with blocks carry balanced `.pathgate[data-path]` wrappers, exactly one
+      chooser, one `<noscript>` warning and one switcher; `1_prereqs_docker.html`, which has no block,
+      carries the switcher and no gate markup. `meta description` is page prose again. `MutationObserver`
+      appears nowhere. Published URLs are lowercase with `.html` and no trailing-slash directories — read
+      `sitemap.xml`, because the 404 page also renders `custom-header.html` and so returns plausible gate
+      counts for a URL that does not exist.
 
 ### Phase 2 — the four lesser leaks
 
@@ -406,9 +413,11 @@ instruction sets visible.
 
 - [ ] P5.1. CentralRepo `README.md` + `CLAUDE.md`: the mechanism, the three authoring forms
       (`pathtabs`, `pathonly`, `deploymentPath` front matter), and the pre-paint requirement.
-- [ ] P5.2. `ai-101/CLAUDE.md` + `k8s-101-workshop/CLAUDE.md:164` (which still says "copy `ai-101`'s
-      shortcodes") updated to point at the upstream mechanism.
-- [ ] P5.3. Promotion step, per global prefs step 12.
+- [x] P5.2. `ai-101/CLAUDE.md` + `k8s-101-workshop/CLAUDE.md:164` (which still says "copy `ai-101`'s
+      shortcodes") updated to point at the upstream mechanism. The `k8s-101` side landed in PR #107
+      (`f3591d8`); the `ai-101` side in `0ddc46c` plus the `[skip ci]` entry below.
+- [ ] P5.3. Promotion step, per global prefs step 12. **Phase 1's share is done** — see Promotion below.
+      Re-walk after Phases 2–4.
 
 ## Implementation Method
 
@@ -496,9 +505,34 @@ Three things cost more than the feature itself:
 
 ## Promotion
 
-- [ ] `Decisions & Commentary` walked
-- [ ] Durable facts promoted to `CLAUDE.md` — list them: <...>
-- [ ] `Status:` set to `Complete`
+Phase 1's share, done. Re-walk after Phases 2–4; `Status` stays `Approved` until then.
+
+- [x] `Decisions & Commentary` walked for Phase 1
+- [x] Durable facts promoted to `ai-101/CLAUDE.md`:
+  - The choice is a default-deny gate, not a tab default — including *why* default-deny is load-bearing
+    (relearn marks tab #1 active server-side, so "hide the inactive tab" alone would present Docker as
+    *the* path to a Kubernetes reader).
+  - The pre-paint contract: `<html data-deployment-path>` set from an inline sync `<head>` script, flag
+    on `documentElement` because `body` does not exist yet, and **assets must not go back into the
+    shortcode** — `.Page.Store` is per-output-format and had been shipping ungated tabs in every
+    `index.print.html`.
+  - Gate on `.pathgate[data-path]`, never relearn's derived `data-tab-item`.
+  - The specificity numbers ((1,2,0) / (1,3,1) / (1,6,1), no `!important`) and the corollary that
+    `@media` adds none, so print overrides must be written at (0,2,1).
+  - Drive relearn with a real `.click()`; the gate is the one sanctioned writer of `tab-selections`, and
+    the reason is mermaid rendering at zero width in a panel relearn believes is hidden.
+  - The banner is server-rendered and CSS-gated — this **supersedes** the `MutationObserver` bullet that
+    was previously in the file and is now actively wrong.
+  - Never emit reader-facing prose from a shortcode: `.Content` feeds both `meta description` and lunr.
+  - The `<noscript>` state is the only one showing both paths and must announce itself.
+  - Three local-build traps: the four per-build nondeterministic tokens, `local_copy.sh` depositing this
+    repo's layouts into a mounted CentralRepo worktree, and an unpopulated relearn submodule surfacing
+    as `unknown output format "print"`.
+  - **`[skip ci]` in any squashed commit suppresses the Pages deploy for the merge commit** — found the
+    hard way on this PR. Absence of a run is the failure mode and it looks like success.
+- [x] Same mechanism facts promoted to `k8s-101-workshop/CLAUDE.md` via PR #107, plus the
+  do-not-copy-`ai-101`'s-shortcodes correction and the `local_copy.sh` shadowing hazard.
+- [ ] `Status:` set to `Complete` — after Phase 5.
 
 ## Risks / Open Questions
 
