@@ -75,6 +75,20 @@ are choices the commits show the outcome of but not the reasoning for.
 - Decision: recovered with `gh workflow run static.yml --ref main`. Promoted to `CLAUDE.md` as a
   post-merge check, because the failure mode is the *absence* of a run and it is indistinguishable from
   success unless you go looking.
+- **Then it happened a second time, to the PR documenting it.** PR #20 was the write-up of this gotcha
+  and quoted the token four times in explanatory prose. A squash merge uses the **PR title and body** as
+  the commit message, not just the squashed commits' messages, so the write-up suppressed its own deploy.
+  The rule is therefore broader than I first wrote it: the token is matched anywhere in the merge commit
+  message, including in text that is only *describing* it. The `CLAUDE.md` entry now spells the token out
+  in words rather than reproducing it, and says so explicitly. Recovered the same way.
+- Lesson: this is the second time in one afternoon that the failure mode was *no signal at all*. Both a
+  cached Docker manifest and a skipped workflow present as success. When a step's success is defined by
+  something having happened elsewhere, check that the thing happened — do not infer it from the absence
+  of an error.
+- Also self-inflicted, worth not repeating: I ran `git reset --hard origin/main` to fast-forward the
+  branch while these two edits were still uncommitted, and lost them. The branch needed syncing because
+  the squash merge had rewritten its history; the edits were unrelated collateral. Commit first, sync
+  second.
 
 ### Live verification, after the deploy
 - Notes: first probes returned 404 bodies that still contained gate CSS, because the 404 page also
