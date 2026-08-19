@@ -2,13 +2,13 @@
 """Generate one linear, single-path handout page per deployment path.
 
 The lab pages are the single source of truth. This script walks ``content/`` in
-site order and, for each deployment path, emits one page with every ``pathtabs``
-block flattened down to that path's body. The other path is dropped entirely --
-not collapsed behind a tab -- because only the *active* tab is ever rendered, in any
-medium: ``theme.css:2659-2673`` sets ``#R-body .tab-content { display: none }`` with
-``.tab-content.active { display: block }``. So a tabbed page silently omits the other
-path. Not a print-only rule -- ``format-print.css:163-176`` merely recolours tabs for
-paper and hides nothing.
+site order and, for each deployment path, emits one page with every ``pathtabs`` and
+``pathonly`` block flattened down to that path's body. The other path is dropped
+entirely -- not collapsed behind a tab -- because only the *active* tab is ever
+rendered, in any medium: ``theme.css:2659-2673`` sets ``#R-body .tab-content
+{ display: none }`` with ``.tab-content.active { display: block }``. So a tabbed page
+silently omits the other path. Not a print-only rule -- ``format-print.css:163-176``
+merely recolours tabs for paper and hides nothing.
 
 For the same reason, the *non*-path tab groups (the command-vs-"Expected Output"
 axis) are flattened as well, into labelled subsections. Leaving them as tabs cost
@@ -93,10 +93,23 @@ STRIP_LINE_PATTERNS = [
 
 FRONT_MATTER_DELIM = "---"
 FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
-PATHTABS_OPEN_RE = re.compile(r"^\s*\{\{<\s*pathtabs\b.*?>\}\}\s*$")
+# ``re.M`` so the same pattern serves both the line-by-line flatteners and the
+# whole-body scan in ``Page.has_path_blocks``.
+PATHTABS_OPEN_RE = re.compile(r"^\s*\{\{<\s*pathtabs\b.*?>\}\}\s*$", re.M)
 PATHTABS_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*pathtabs\s*>\}\}\s*$")
 PATHTAB_OPEN_RE = re.compile(r"^\s*\{\{%\s*pathtab\s+path=\"([^\"]+)\"\s*%\}\}\s*$")
 PATHTAB_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*pathtab\s*%\}\}\s*$")
+
+# ``pathonly`` -- path-specific prose and whole sections outside a tab group. Angle
+# brackets, unlike ``pathtab``: the shortcode emits its own wrapper ``<div>`` around
+# ``.Inner`` rendered with ``RenderString``, so its output must not be fed back through
+# Goldmark, and ``{{< >}}`` inserts output after rendering. The ``{{% %}}`` form is a
+# plausible mistake -- it is what ``pathtab`` uses -- so it is a hard error here rather
+# than an unmatched line that would flatten to nothing.
+PATHONLY_OPEN_RE = re.compile(r"^\s*\{\{<\s*pathonly\s+path=\"([^\"]+)\"\s*>\}\}\s*$", re.M)
+PATHONLY_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*pathonly\s*>\}\}\s*$")
+PATHONLY_WRONG_DELIM_RE = re.compile(r"^\s*\{\{%\s*/?\s*pathonly\b", re.M)
+
 HEADING_RE = re.compile(r"^(#{1,5})(\s+)(.*)$")
 
 # Plain (non-path) tab groups -- the command-vs-"Expected Output" axis. ``\b`` and
@@ -166,15 +179,32 @@ class Page:
             return 0
 
     @property
-    def has_pathtabs(self) -> bool:
-        return bool(PATHTABS_OPEN_RE.search(self.body) or "{{< pathtabs" in self.body)
+    def has_path_blocks(self) -> bool:
+        """Does this page carry path-specific content in either block shape?
+
+        ``pathonly`` has to count. A page whose only path-specific content is a
+        ``pathonly`` block has no ``pathtabs`` block and no whole-page
+        ``deploymentPath``, so on the ``pathtabs``-only test it was relevant to neither
+        path and dropped out of *both* handouts -- the content would exist on the site
+        and appear on no printed sheet.
+
+        The malformed ``{{% pathonly %}}`` spelling counts as well, so that the page is
+        pulled in and ``flatten_pathonly`` gets to reject it. Left out, a page whose only
+        path content carried that one-character mistake dropped out of both handouts and
+        nothing said so -- the delimiter error hid behind the inclusion test.
+        """
+        return bool(
+            PATHTABS_OPEN_RE.search(self.body)
+            or PATHONLY_OPEN_RE.search(self.body)
+            or PATHONLY_WRONG_DELIM_RE.search(self.body)
+        )
 
     def relevant_to(self, path_key: str) -> bool:
         if self.rel_md in EXCLUDE_PAGES:
             return False
         if self.deployment_path and self.deployment_path != path_key:
             return False
-        return self.has_pathtabs or self.deployment_path is not None
+        return self.has_path_blocks or self.deployment_path is not None
 
 
 def collect_pages() -> list[Page]:
@@ -239,6 +269,13 @@ def flatten_pathtabs(body: str, path_key: str, source: str) -> str:
             out.append(line)
             continue
 
+        if PATHONLY_OPEN_RE.match(line) or PATHONLY_WRONG_DELIM_RE.match(line):
+            raise SystemExit(
+                f"{source}: pathonly inside a pathtabs block is either redundant (same "
+                "path) or dead content (the other path); move it out, or let the pathtab "
+                "body carry the text"
+            )
+
         m = PATHTAB_OPEN_RE.match(line)
         if m:
             key = m.group(1)
@@ -269,6 +306,63 @@ def flatten_pathtabs(body: str, path_key: str, source: str) -> str:
 
     if block is not None:
         raise SystemExit(f"{source}: unclosed pathtabs block")
+    return "\n".join(out)
+
+
+def flatten_pathonly(body: str, path_key: str, source: str) -> str:
+    """Inline every ``pathonly`` block belonging to ``path_key``; delete the others.
+
+    A sibling of ``flatten_pathtabs`` rather than a reuse of it. That function refuses a
+    block that does not name every key in ``PATHS``, which is right for a tab group -- a
+    missing tab is a reader left with no instructions at all -- and wrong here: a
+    ``pathonly`` block names exactly one path by design, and the other path's absence is
+    the whole point of the shortcode.
+
+    Every other failure is fatal rather than a warning, for the same reason the
+    shortcode itself uses ``errorf``: a mis-keyed block is either content shown to the
+    wrong reader or content shown to nobody, and both look like working output.
+    """
+    out: list[str] = []
+    keys = {p["key"] for p in PATHS}
+    # None = outside a block. Otherwise True (this path's block) or False (the other's).
+    keep: bool | None = None
+
+    for line, in_fence in iter_lines_with_fence_state(body.splitlines()):
+        if in_fence:
+            if keep is not False:
+                out.append(line)
+            continue
+
+        if PATHONLY_WRONG_DELIM_RE.match(line):
+            raise SystemExit(
+                f"{source}: write pathonly as {{{{< pathonly path=\"KEY\" >}}}}, not "
+                "{{% pathonly %}} -- the percent form re-processes the shortcode's own "
+                "rendered HTML as markdown and the block renders ungated"
+            )
+
+        m = PATHONLY_OPEN_RE.match(line)
+        if m:
+            if keep is not None:
+                raise SystemExit(f"{source}: nested pathonly blocks are not supported")
+            key = m.group(1)
+            if key not in keys:
+                raise SystemExit(
+                    f"{source}: pathonly has unknown path {key!r}; expected one of "
+                    f"{sorted(keys)}"
+                )
+            keep = key == path_key
+            continue
+        if PATHONLY_CLOSE_RE.match(line):
+            if keep is None:
+                raise SystemExit(f"{source}: pathonly close marker with no open")
+            keep = None
+            continue
+
+        if keep is not False:
+            out.append(line)
+
+    if keep is not None:
+        raise SystemExit(f"{source}: unclosed pathonly block")
     return "\n".join(out)
 
 
@@ -452,7 +546,15 @@ def collapse_blank_runs(body: str) -> str:
 
 def render_page(page: Page, path_key: str, resources: dict[str, Path]) -> str:
     source = str(page.md_path.relative_to(REPO_ROOT))
+    # Order matters twice over. ``flatten_pathtabs`` runs first because it is the only
+    # pass that can still see -- and reject -- a ``pathonly`` block nested inside a
+    # ``pathtab`` body; once the other passes have run, that nesting is indistinguishable
+    # from a top-level block. ``flatten_pathonly`` then runs before
+    # ``flatten_plain_tabs`` so a ``pathonly`` block wrapping a command/output tab group
+    # is dropped whole, instead of the tab flattener first turning it into labelled
+    # subsections that the next pass has to delete again.
     body = flatten_pathtabs(page.body, path_key, source)
+    body = flatten_pathonly(body, path_key, source)
     body = flatten_plain_tabs(body, source)
     body = strip_site_only_paragraphs(body)
     body = rewrite_refs(body, page, resources)

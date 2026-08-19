@@ -14,10 +14,16 @@ This linter is the guardrail for that invariant. It checks:
    does not synchronise with the reader's choice
 2. hand-written ``groupid="deploy-path"`` -- bypasses the pathtabs shortcode and
    its missing-path check
-3. path-specific tokens outside a path block -- with an explicit allowlist below
+3. path-specific tokens outside a path block -- with an explicit allowlist below.
+   Fenced code is checked too: a bare ``kubectl`` fence outside a path block is the
+   most likely place for this leak to appear, not the least
 4. ``cd "~`` anywhere -- bash does not expand ``~`` inside double quotes, so the
    command always fails
-5. stale generated handouts (delegates to ``gen_handouts.py --check``)
+5. block markup that either tool would silently mis-parse: a ``{{% pathonly %}}``
+   written with ``pathtab``'s delimiters, an unknown ``path=`` key, a path block
+   nested in another, a marker sharing a line with anything else, and any block
+   still open at end of file
+6. stale generated handouts (delegates to ``gen_handouts.py --check``)
 
 Usage
 -----
@@ -46,7 +52,7 @@ CONTENT = REPO_ROOT / "content"
 
 # Generated single-path pages. Path tokens outside pathtabs are the whole point
 # there, so the token checks would be nothing but false positives. Their
-# freshness is checked separately (check 5).
+# freshness is checked separately (check 6).
 GENERATED_DIRS = [CONTENT / "09Reference" / "handouts"]
 
 # Front-matter key that marks a whole page as belonging to one path.
@@ -63,13 +69,47 @@ PATH_KEYS = ["docker", "k8s"]
 PATH_TITLE_RE = re.compile(r"\b(docker|compose|kubernetes|k8s|helm)\b", re.I)
 
 # Tokens that only make sense on one path. Each is (label, regex).
+#
+# Commands are the obvious half and were the whole list to begin with. Both leaks
+# that actually shipped were the other half -- prose naming one path's runtime as
+# *the* way the lab is wired: "the agent container reaches the MCP server container
+# at ... using the Docker service hostname" (content/04MCP/_index.md) and "Docker
+# Engine + Compose v2" (content/_index.md). To a Kubernetes reader, who has no Docker
+# daemon at all, that reads as authoritative rather than as one of two options, which
+# is the same harm as an unbranched `docker compose` command.
 PATH_TOKENS: list[tuple[str, re.Pattern]] = [
     ("docker compose", re.compile(r"\bdocker\s+compose\b")),
     ("docker exec", re.compile(r"\bdocker\s+exec\b")),
     ("docker volume", re.compile(r"\bdocker\s+volume\b")),
+    # The rest of the docker CLI. `network` is left to the runtime-object token below,
+    # which catches it case-insensitively and in prose as well as in a command.
+    (
+        "docker subcommand",
+        re.compile(
+            r"\bdocker\s+(ps|logs|run|build|images|inspect|pull|push"
+            r"|stop|start|restart|rm|cp|version)\b"
+        ),
+    ),
+    ("Docker product name", re.compile(r"\bDocker\s+(Engine|Desktop|Compose)\b", re.I)),
+    (
+        "Docker runtime object",
+        re.compile(r"\bDocker\s+(network|service|container|host|daemon|socket)s?\b", re.I),
+    ),
+    ("Compose version", re.compile(r"\bCompose\s+v\d+\b", re.I)),
+    ("compose file", re.compile(r"\b(docker-)?compose\.ya?ml\b", re.I)),
     ("compose profile", re.compile(r"--profile\s+lab\d")),
     ("kubectl", re.compile(r"\bkubectl\b")),
-    ("helm", re.compile(r"\bhelm\s+(upgrade|install|uninstall|version)\b")),
+    (
+        "helm",
+        re.compile(
+            r"\bhelm\s+(upgrade|install|uninstall|version|repo|list"
+            r"|status|template|get|rollback|history|show)\b"
+        ),
+    ),
+    (
+        "Kubernetes object",
+        re.compile(r"\bKubernetes\s+(Service|Deployment|Pod|namespace|node|cluster)s?\b", re.I),
+    ),
     ("helm values file", re.compile(r"\bvalues-lab\d\.yaml\b")),
     ("port-forward", re.compile(r"\bport-forward\b")),
     ("NodePort", re.compile(r"\bNodePort\b|:30280\b")),
@@ -143,10 +183,39 @@ ALLOWLIST: list[dict] = [
 FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
 FRONT_MATTER_DELIM = "---"
 
-PATHTABS_OPEN_RE = re.compile(r"\{\{<\s*pathtabs\b")
-PATHTABS_CLOSE_RE = re.compile(r"\{\{<\s*/\s*pathtabs\s*>\}\}")
-TABS_OPEN_RE = re.compile(r"\{\{<\s*tabs\b")
-TABS_CLOSE_RE = re.compile(r"\{\{<\s*/\s*tabs\s*>\}\}")
+# Every block marker worth tracking, in one pattern, so a line can be scanned for all
+# of them left to right. Three properties of this scan are each load-bearing:
+#
+# * it finds *every* marker on a line, where an ``if/elif`` chain of one-marker checks
+#   found only the first. A line carrying a close and the next open, or a whole group
+#   opened and closed on one line, used to register one transition and leave the
+#   tracker stuck on for the rest of the file.
+# * it captures the delimiter, so ``{{% pathonly %}}`` -- a copy of ``pathtab``'s
+#   delimiter style -- is reported rather than silently accepted.
+# * it keeps ``pathtabs`` ahead of ``tabs`` in the alternation, so the shorter name
+#   never claims the longer one's marker.
+#
+# The inner ``pathtab`` / ``tab`` markers are not matched and do not need to be: this
+# linter cares which *block* it is inside, not which tab.
+BLOCK_MARKER_RE = re.compile(
+    r"\{\{(?P<delim>[<%])\s*(?P<close>/\s*)?(?P<name>pathtabs|pathonly|tabs)\b(?P<args>[^}]*?)[%>]\}\}"
+)
+
+# Backticked prose is not markup. A sentence mentioning `{{< pathtabs >}}` inline used
+# to flip the tracker on and suppress every path-token check to the end of the file,
+# and skipping fenced code never helped -- inline code is not a fence.
+INLINE_CODE_RE = re.compile(r"`+[^`]*`+")
+
+# Blocks whose body is scoped to one path, so path tokens inside them are already
+# branched. They may not nest: see the nested-path-block violation below.
+PATH_BLOCKS = ("pathtabs", "pathonly")
+
+# ``pathonly`` takes exactly one attribute. Anything else is either a typo or an
+# attempt to grow the signature, which the handout generator's anchored marker
+# regexes would stop matching -- silently, producing a handout with the shortcode
+# still in it.
+PATHONLY_ARGS_RE = re.compile(r'^\s*path="([^"]+)"\s*$')
+
 TAB_TITLE_RE = re.compile(r"\{\{%\s*tab\s+[^%]*title=\"([^\"]+)\"")
 GROUPID_RE = re.compile(r"groupid\s*=\s*\"deploy-path\"")
 BAD_TILDE_RE = re.compile(r'cd\s+"~')
@@ -212,8 +281,9 @@ def lint_page(md: Path) -> list[Violation]:
     page_is_path_scoped = page_path in PATH_KEYS
 
     fence: str | None = None
-    in_pathtabs = False
-    in_plain_tabs = False
+    # Depths, not booleans. As booleans the first close ended a nested group, and the
+    # outer block's remaining lines were then treated as unbranched prose.
+    depth = {"pathtabs": 0, "pathonly": 0, "tabs": 0}
 
     for i, line in enumerate(lines, start=1):
         m = FENCE_RE.match(line)
@@ -238,44 +308,117 @@ def lint_page(md: Path) -> list[Violation]:
                 )
             )
 
-        if in_fence:
-            continue
-
-        if GROUPID_RE.search(line):
-            violations.append(
-                Violation(
-                    md,
-                    i,
-                    "handwritten-groupid",
-                    'use the pathtabs shortcode instead of groupid="deploy-path"',
-                    line,
-                )
-            )
-
-        if PATHTABS_OPEN_RE.search(line):
-            in_pathtabs = True
-        elif PATHTABS_CLOSE_RE.search(line):
-            in_pathtabs = False
-        elif TABS_OPEN_RE.search(line):
-            in_plain_tabs = True
-        elif TABS_CLOSE_RE.search(line):
-            in_plain_tabs = False
-
-        if in_plain_tabs:
-            title = TAB_TITLE_RE.search(line)
-            if title and PATH_TITLE_RE.search(title.group(1)):
+        # Every check that reads *markup* skips fenced code, and each for its own
+        # reason: a fenced ``{{< pathtabs >}}`` documents the shortcode rather than
+        # using it, and flipping a tracker on it would suppress the token check for the
+        # rest of the page; a fenced groupid="deploy-path" is likewise an example of
+        # what not to write. The token check below deliberately does *not* skip fences.
+        opened_here: set[str] = set()
+        if not in_fence:
+            if GROUPID_RE.search(line):
                 violations.append(
                     Violation(
                         md,
                         i,
-                        "path-tab-outside-pathtabs",
-                        f"tab title {title.group(1)!r} looks like a deployment path; "
-                        "use pathtabs so it follows the reader's choice",
+                        "handwritten-groupid",
+                        'use the pathtabs shortcode instead of groupid="deploy-path"',
                         line,
                     )
                 )
 
-        if in_pathtabs or page_is_path_scoped:
+            markup = INLINE_CODE_RE.sub(" ", line)
+            markers = list(BLOCK_MARKER_RE.finditer(markup))
+            for marker in markers:
+                name = marker.group("name")
+                if marker.group("delim") == "%":
+                    violations.append(
+                        Violation(
+                            md,
+                            i,
+                            "wrong-delimiter",
+                            f"write {name} with angle brackets, {{{{< ... >}}}}, not "
+                            f"{{{{% ... %}}}} -- {name} emits its own HTML wrapper and the "
+                            "percent form runs that output back through the markdown "
+                            "renderer, which mangles it silently; for a path block the "
+                            "result is content that renders ungated",
+                            line,
+                        )
+                    )
+                if marker.group("close") is not None:
+                    depth[name] = max(0, depth[name] - 1)
+                    continue
+                if name in PATH_BLOCKS and (depth["pathtabs"] or depth["pathonly"]):
+                    violations.append(
+                        Violation(
+                            md,
+                            i,
+                            "nested-path-block",
+                            f"a {name} block inside another path block is either redundant (same "
+                            "path) or dead content (the other path); move it out, or let the "
+                            "enclosing block's body carry the text",
+                            line,
+                        )
+                    )
+                if name == "pathonly":
+                    args = PATHONLY_ARGS_RE.match(marker.group("args"))
+                    if not args:
+                        violations.append(
+                            Violation(
+                                md,
+                                i,
+                                "pathonly-args",
+                                'pathonly takes exactly one attribute: path="KEY", where KEY is '
+                                f"one of {', '.join(PATH_KEYS)}",
+                                line,
+                            )
+                        )
+                    elif args.group(1) not in PATH_KEYS:
+                        violations.append(
+                            Violation(
+                                md,
+                                i,
+                                "unknown-path",
+                                f"unknown path {args.group(1)!r}; use one of "
+                                f"{', '.join(PATH_KEYS)}",
+                                line,
+                            )
+                        )
+                depth[name] += 1
+                opened_here.add(name)
+
+            if markers and (len(markers) > 1 or BLOCK_MARKER_RE.sub("", markup).strip()):
+                violations.append(
+                    Violation(
+                        md,
+                        i,
+                        "marker-not-alone",
+                        "put each block marker alone on its own line -- gen_handouts.py matches "
+                        "them anchored to the whole line, so a shared line is never flattened and "
+                        "ships into the handout as a raw shortcode",
+                        line,
+                    )
+                )
+
+            # ``opened_here`` covers a group opened and closed on one line, whose depth
+            # is already back to zero by the time the title is inspected.
+            if depth["tabs"] or "tabs" in opened_here:
+                title = TAB_TITLE_RE.search(line)
+                if title and PATH_TITLE_RE.search(title.group(1)):
+                    violations.append(
+                        Violation(
+                            md,
+                            i,
+                            "path-tab-outside-pathtabs",
+                            f"tab title {title.group(1)!r} looks like a deployment path; "
+                            "use pathtabs so it follows the reader's choice",
+                            line,
+                        )
+                    )
+
+        in_path_block = bool(
+            depth["pathtabs"] or depth["pathonly"] or opened_here.intersection(PATH_BLOCKS)
+        )
+        if in_path_block or page_is_path_scoped:
             continue
         if allowed(rel_md, line):
             continue
@@ -293,8 +436,23 @@ def lint_page(md: Path) -> list[Violation]:
                 )
                 break
 
-    if in_pathtabs:
-        violations.append(Violation(md, len(lines), "unclosed-pathtabs", "pathtabs block never closed", ""))
+    # An unbalanced block is what makes a tracker leak, and a leaked tracker is silent
+    # -- it suppresses checks rather than reporting anything. Hugo also rejects an
+    # unclosed shortcode, but only once the block is genuinely unclosed; this fires as
+    # well when the tracker itself has desynchronised, which is the case worth hearing
+    # about.
+    for name, open_blocks in depth.items():
+        if open_blocks:
+            violations.append(
+                Violation(
+                    md,
+                    len(lines),
+                    f"unclosed-{name}",
+                    f"{open_blocks} {name} block(s) still open at end of file; give every "
+                    f"{{{{< {name} ... >}}}} a matching {{{{< /{name} >}}}}",
+                    "",
+                )
+            )
 
     return violations
 
