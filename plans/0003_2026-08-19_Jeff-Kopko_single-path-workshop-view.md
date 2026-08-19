@@ -2,7 +2,7 @@
 Date: 2026-08-19
 Owner: Jeff Kopko
 Slug: single-path-workshop-view
-Status: Approved
+Status: Complete
 Supersedes: none
 Superseded-By: none
 Plan File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.md
@@ -681,9 +681,12 @@ Phase 1's share, done. Re-walk after Phases 2–4; `Status` stays `Approved` unt
 - [x] CentralRepo has no `CLAUDE.md`, so P5.1's CentralRepo half is `README.md` (+127 lines, `adb6309`)
   and `RELEASE_NOTES.md`. Creating one for CentralRepo is a bigger artifact than this plan sized and is
   left as a follow-up rather than improvised here.
-- [ ] `Status:` set to `Complete` — held open deliberately: promotion is done, but neither branch is
-  pushed and nothing is merged. Flip it when `pathgate-p234` and `pathgate-p4-tooling` are merged and
-  the image has rebuilt.
+- [x] `Status:` set to `Complete`. CentralRepo #73 (`f93265af`) and #74 (`eeb3af6d`) merged, the prod
+  image rebuilt and `:latest` verified to serve the new manifest (`sha256:20c5e555…`) carrying
+  `pathonly.html` and `pathnav/step.gotmpl`, then ai-101 #22 (`59a1def4`) merged. Pages, Path lint and
+  Handout PDFs all green on the new head, both PDFs rendered (889 KB / 1.36 MB), and the published
+  pages carry the gate: `data-deployment-path`, five sidebar hide rules, the `pathmiss` banners, and an
+  active `<li>` whose `data-nav-id` matches the rule target exactly.
 
 ## Risks / Open Questions
 
