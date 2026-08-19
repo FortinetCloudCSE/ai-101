@@ -154,6 +154,41 @@ ALLOWLIST: list[dict] = [
         "match": "Docker Compose",
         "why": "the gate page's own prose describing the two choices",
     },
+    # The gate page's "Which path should I choose?" comparison. A reader who has
+    # not chosen yet cannot see inside a path block, so the material that informs
+    # the choice has to sit outside one -- naming both paths is the point. Listed
+    # row by row rather than allowlisting the whole file, because everything else
+    # outside a path block on that page still has to be path-neutral.
+    {
+        "file": "01Intro/_index.md",
+        "match": "| **Runs on** |",
+        "why": "path comparison table: where the containers run",
+    },
+    {
+        "file": "01Intro/_index.md",
+        "match": "| **You need** |",
+        "why": "path comparison table: side-by-side prerequisites",
+    },
+    {
+        "file": "01Intro/_index.md",
+        "match": "| **Per-lab command** |",
+        "why": "path comparison table: the one command that differs per lab",
+    },
+    {
+        "file": "01Intro/_index.md",
+        "match": "| **Reaching the lab UI** |",
+        "why": "path comparison table: localhost vs port-forward",
+    },
+    {
+        "file": "01Intro/_index.md",
+        "match": "| **Cleanup** |",
+        "why": "path comparison table: teardown command",
+    },
+    {
+        "file": "01Intro/_index.md",
+        "match": "You do not have a Kubernetes cluster",
+        "why": "gate page bullet: naming the absent prerequisite is the deciding factor",
+    },
     {
         "file": None,
         "match": "http://<ollama-host>:11434/v1",
