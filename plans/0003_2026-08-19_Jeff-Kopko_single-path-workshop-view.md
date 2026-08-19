@@ -7,8 +7,7 @@ Supersedes: none
 Superseded-By: none
 Plan File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.md
 Spec File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.spec.md
-Log File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.log.md (not yet created — warranted
-  here because the work spans sessions and lands in CentralRepo, but written at implementation, not now)
+Log File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.log.md
 
 ## Goal
 
@@ -282,46 +281,76 @@ rest is optional rather than half-finished.
 ### Phase 0 — gate
 
 - [x] P0.1. The URL question is settled: **no**, the path stays out of the URL. Runtime gate chosen.
-- [ ] P0.2. CentralRepo PR #71 merged, prod image rebuilt, digest confirmed moved (plan 0002 S2).
-      Nothing below can be verified before this. Approved by Jeff 2026-08-19.
+- [x] P0.2. CentralRepo PR #71 merged (`origin/main` = `b61c675`, "Merge pull request #71"), prod image
+      rebuilt, digest confirmed moved (plan 0002 S2). Nothing below can be verified before this.
+      Approved by Jeff 2026-08-19.
 
 ### Phase 1 — stop both instruction sets being visible
 
 Everything in this phase exists to fix the confirmed root cause. Nothing here is optional and nothing
 ships alone; P1.1-P1.5 are one deliverable in five files.
 
-- [ ] P1.1. CentralRepo `layouts/partials/custom-header.html`: pre-paint initialiser. Reads
+Landed as CentralRepo `56747bd` on branch `pathtabs-upstream`, one commit across four files.
+
+- [x] P1.1. CentralRepo `layouts/partials/custom-header.html`: pre-paint initialiser. Reads
       localStorage key `window.relearn.absBaseUri + '/deployment-path'`, validates against the keys in
       `site.Params.deploymentPaths`, sets `document.documentElement.dataset.deploymentPath`. No-ops
       entirely when `deploymentPaths` is unset. Set it on `documentElement` — `document.body` does not
       exist at this point. Emitted at `baseof.html:41`, synchronous, after `dependencies.html`, so
       `window.relearn.absBaseUri` is available and nothing has painted.
-- [ ] P1.2. Same file: the **default-deny** CSS. Path-gated content is hidden when
+      Also migrates a returning reader's choice out of relearn's `tab-selections` key, and reconciles
+      that key *to* the gate's on every load so the panel the gate reveals is the one relearn thinks is
+      active — otherwise mermaid renders at zero width in a panel relearn believes is hidden.
+- [x] P1.2. Same file: the **default-deny** CSS. Path-gated content is hidden when
       `html` has no `data-deployment-path`, and shown only for the matching path. Must be scoped to
       path blocks — a global non-active-tab rule would suppress the 16 command-vs-output tab groups,
       including the 3-tab group at `content/01Intro/2_prereqs_k8s/index.md:127-157` whose middle tab
       is an instruction. Verify the selector beats `#R-body .tab-content.active`
       (`theme.css:2659-2673`) on specificity without `!important` — measure, do not assume, because
-      `!important` here leaks into print and the handout PDFs.
-- [ ] P1.3. `pathtabs` emits a per-path wrapper inside each tab's content, so the CSS gates on the
+      `!important` here leaks into print and the handout PDFs. Measured: theme
+      `#R-body .tab-content.active` is (1,2,0); the hide rule is (1,3,1) and the `:has()` show rule is
+      (1,6,1), so no `!important` is needed. Separately, `@media` contributes **no** specificity, so the
+      print rules had to be written at (0,2,1) to beat the per-path `html[data-deployment-path="…"]`
+      show rules and win on source order — the naive `@media print{.pathlock__banner{display:none}}`
+      is (0,1,0) and would have printed the banner.
+- [x] P1.3. `pathtabs` emits a per-path wrapper inside each tab's content, so the CSS gates on the
       path key rather than on relearn's derived `data-tab-item` (`anchorize(title)+anchorize(icon)`,
       so "Docker Compose" → `docker-compose`, not `docker`). **Do not add an attribute to `pathtab`** —
       `gen_handouts.py:93` is anchored on its exact current signature and breaks silently.
-      Hide `.tab-nav` inside path blocks once a path is chosen.
-- [ ] P1.4. CentralRepo `content-header.html`: the persistent indicator and switcher, on every page
+      Hide `.tab-nav` inside path blocks once a path is chosen. Wrapper is `.pathgate[data-path]`;
+      `pathonly` (P2.4) reuses it, so there is one gating mechanism rather than two. An empty `pathtab`
+      body is now an `errorf` — it would otherwise render a gated panel containing nothing, which reads
+      as "this path has no work to do" rather than as the authoring mistake it is.
+- [x] P1.4. CentralRepo `content-header.html`: the persistent indicator and switcher, on every page
       including the 8 with no `pathtabs` block. Names the active path; changes it in one interaction;
       writes localStorage and updates the attribute live with no reload. Renders nothing when
       `deploymentPaths` is unset.
-- [ ] P1.5. The **no-choice chooser** (Jeff's Q3 answer: block, do not show both). With no stored
+- [x] P1.5. The **no-choice chooser** (Jeff's Q3 answer: block, do not show both). With no stored
       path, gated content stays hidden and the page presents the choice instead. Plus a `<noscript>`
       block that un-hides everything *and* renders an explicit warning — "JavaScript is off, so both
       paths are shown below; follow only one". That is the sole state where both instruction sets
       appear and it must announce itself, because showing both silently is the exact reported failure.
-- [ ] P1.6. `ai-101` `scripts/repoConfig.json`: `deploymentPaths` (also plan 0002 B2 — land it once).
-- [ ] P1.7. Verify: 42 pages / 0 WARN. The correct path paints first with no post-`DOMContentLoaded`
-      content mutation. With storage cleared, no lab page shows any path's steps. With JS disabled,
-      both paths show *and* the warning is present. The 16 non-path tab groups byte-identical in the
-      built HTML. `k8s-101-workshop` output byte-identical, no new warnings. Handout PDFs still build.
+      Both live in `content-header.html`, not the shortcode — see Plan Changes.
+- [x] P1.6. `ai-101` `scripts/repoConfig.json`: `deploymentPaths` (also plan 0002 B2 — land it once).
+      In PR #19; **Phase 1 is not live for `ai-101` until that merges**, since the whole mechanism
+      no-ops without the param.
+- [x] P1.7. Verify — done except the three browser-level criteria, which this host cannot check (no
+      Chrome/Chromium installed). What passed:
+      - `ai-101` 42 pages / 0 WARN.
+      - All tab `itemid`s identical to baseline, path and non-path alike (`docker-compose`,
+        `kubernetes--helm`), so no returning reader's stored selection breaks and the 16
+        command-vs-output groups are untouched.
+      - `k8s-101-workshop` and `faig-training-workshop` — neither sets `deploymentPaths` — emit zero
+        gate markup and build **byte-identical** to baseline once the build clock is normalised.
+        `faig` 36 pages / 83 WARN before and after; all 83 are its own pre-existing broken image and
+        link references.
+      - Handout `index.print.html` differs only by head assets and the print-hidden switcher; the
+        `<body>` is byte-unchanged, so the PDFs are unaffected.
+      - `lint_paths.py` clean, `gen_handouts.py --check` fresh.
+      - Exactly one chooser per page containing `pathtabs` blocks, zero on pages without.
+      Not verified here: first-paint order, the no-choice blocked state, and the JS-disabled state.
+      All three are verified by construction and by reading the emitted CSS; the PDF render itself can
+      only be proven by CI's `handout-pdf.yml`.
 
 ### Phase 2 — the four lesser leaks
 
@@ -407,14 +436,63 @@ clears. Do not start P1 before P0.
   build-time-variant option's cost was overstated — a path carried as a URL *subdirectory* does not
   touch `baseURL`, `repoName`, analytics or quiz keys, and only opted-in repos (today: `ai-101`
   alone) see any URL change. The rejection now rests on the open URL question, not on cost.
+- 2026-08-19, `Approved`, during Phase 1 implementation. Two deviations from the written steps. Both
+  move code out of the `pathtabs` shortcode and into partials; neither changes what a reader sees.
+  1. **P1.1/P1.2's assets serve the shortcode, so they had to leave it.** The pre-existing `pathtabs`
+     carried its own `<style>` and `<script>`, guarded by `.Page.Store` so they emitted once per page.
+     That guard is per-output-format, so the print format got the markup and not the assets — every
+     `index.print.html` had been shipping ungated. Moving both to `custom-header.html`, which runs
+     inside `<head>` in every format, is what P1.1 needed anyway for pre-paint, and it deleted the
+     per-block `@media print` workaround that had been papering over the same hole.
+  2. **P1.5's chooser and `<noscript>` moved to `content-header.html`.** The step reads as though the
+     shortcode emits them. It cannot: anything a shortcode writes lands in `.Content`, and relearn
+     builds `<meta name="description">` from `.Summary | plainify`
+     (`themes/hugo-theme-relearn/layouts/partials/meta.html:44`) and indexes the same text for lunr.
+     Emitting them per block put "JavaScript is disabled, so all 2 deployment paths are shown below"
+     into the description and search snippet of every lab page and added 120 words to each (word count
+     911 → 1031). In `content-header.html`, gated on `.HasShortcode "pathtabs"`, they are outside
+     `.Content` and appear once per page rather than once per block — 911 → 913, description clean.
+- 2026-08-19: the P2.2 → P1.2 reference in the specificity risk is a typo for P1.2. Measuring happened
+  in P1.2 as intended; no `!important` was needed, so the risk is closed either way.
 
 ## Files Changed
 
-- (none yet)
+CentralRepo, branch `pathtabs-upstream`, commit `56747bd`:
+
+- `layouts/shortcodes/pathtabs.html` — 139 → 80 lines. Emits markup only; the `<style>`, `<script>`,
+  `.Page.Store` guard, chooser and `<noscript>` are all gone. Wraps each path's body in
+  `.pathgate[data-path]`, renders one CSS-gated `.pathlock__value` per path in place of the old
+  `MutationObserver` banner, and `errorf`s on an empty `pathtab` body.
+- `layouts/partials/custom-header.html` — +296. Gate CSS (default-deny, per-path, print, `<noscript>`
+  un-hide) plus the inline synchronous pre-paint initialiser and the `window.fortiPath` API.
+- `layouts/partials/content-header.html` — +44. Chooser and `<noscript>` warning gated on
+  `.HasShortcode "pathtabs"`; the switcher on every page.
+- `README.md` — +27/-… the `pathtabs`/`pathtab` behaviour list rewritten, plus five new gotchas.
+
+`pathtab.html` deliberately untouched — `gen_handouts.py:93` is anchored on its exact signature.
+
+`ai-101` `scripts/repoConfig.json` (P1.6) is in PR #19, unmerged.
 
 ## Session Summary
 
-- (write at end)
+Phase 1 implemented inline in the existing worktree `CentralRepo-pathtabs-upstream` rather than a fresh
+tmux session, since the context was already there and the Implementation Method's requirement is the
+worktree, not the terminal.
+
+Three things cost more than the feature itself:
+
+- **"Byte-identical output" is not directly measurable.** Four tokens change on every build: the
+  `?178…` asset cache-buster, `R-image-<md5>`, `last-updated-time-utc`, and the anonymous
+  `data-tab-group=<md5>`. A first comparison showed 25 files differing and looked like a regression;
+  building the *baseline* twice produced the same diff set, which is what proved it noise. All the
+  byte-comparison claims above are after normalising those.
+- **`local_copy.sh` copies the workshop repo's `layouts/shortcodes/*` and `layouts/partials/*` over
+  CentralRepo's — including into a mounted CentralRepo worktree during local testing.** It silently
+  deposited `ai-101`'s `dependencies.html` into the worktree mid-session. Check `git status` in the
+  worktree after every local build.
+- **A fresh `git worktree add` leaves `themes/hugo-theme-relearn` unpopulated**, and relearn is what
+  defines the `print` output format, so the baseline build died with `unknown output format "print"`
+  rather than anything to do with this change.
 
 ## Promotion
 
