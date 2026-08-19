@@ -52,8 +52,9 @@ GENERATED_DIRS = [CONTENT / "09Reference" / "handouts"]
 # Front-matter key that marks a whole page as belonging to one path.
 PAGE_PATH_KEY = "deploymentPath"
 
-# Keys accepted by the pathtab shortcode. Must match layouts/shortcodes/pathtab.html
-# and PATHS in scripts/gen_handouts.py.
+# Keys accepted by the pathtab shortcode, which now lives in CentralRepo. Must match
+# the `key` fields of `deploymentPaths` in scripts/repoConfig.json -- the site param
+# that shortcode reads -- and PATHS in scripts/gen_handouts.py.
 PATH_KEYS = ["docker", "k8s"]
 
 # A tab title matching this is a path switch. Catching it in a plain `tabs` group

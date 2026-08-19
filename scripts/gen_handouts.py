@@ -4,8 +4,11 @@
 The lab pages are the single source of truth. This script walks ``content/`` in
 site order and, for each deployment path, emits one page with every ``pathtabs``
 block flattened down to that path's body. The other path is dropped entirely --
-not collapsed behind a tab -- because print output renders only the active tab
-(``format-print.css``), so a printed tabbed page silently omits the other path.
+not collapsed behind a tab -- because only the *active* tab is ever rendered, in any
+medium: ``theme.css:2659-2673`` sets ``#R-body .tab-content { display: none }`` with
+``.tab-content.active { display: block }``. So a tabbed page silently omits the other
+path. Not a print-only rule -- ``format-print.css:163-176`` merely recolours tabs for
+paper and hides nothing.
 
 For the same reason, the *non*-path tab groups (the command-vs-"Expected Output"
 axis) are flattened as well, into labelled subsections. Leaving them as tabs cost
@@ -36,9 +39,11 @@ OUT_DIR = CONTENT / "09Reference" / "handouts"
 
 GENERATOR = "scripts/gen_handouts.py"
 
-# Deployment paths. Keys must match the ``path=`` values accepted by the
-# ``pathtab`` shortcode (layouts/shortcodes/pathtab.html) and the vocabulary in
-# scripts/lint_paths.py.
+# Deployment paths. The ``pathtab`` shortcode now lives in CentralRepo and reads its
+# vocabulary from the ``deploymentPaths`` site param, so these keys and titles must
+# match ``deploymentPaths`` in scripts/repoConfig.json and PATH_KEYS in
+# scripts/lint_paths.py. Titles matter as much as keys: relearn keys each reader's
+# stored tab selection on ``anchorize(title)``.
 PATHS = [
     {
         "key": "docker",
@@ -272,8 +277,8 @@ def flatten_plain_tabs(body: str, source: str) -> str:
 
     Path tabs are resolved by ``flatten_pathtabs``; what is left is the
     command-vs-"Expected Output" axis. Those must be flattened too, for the same
-    reason the path tabs are: ``format-print.css`` renders only the *active* tab,
-    so in a PDF every second and third panel silently disappears. That loses all
+    reason the path tabs are: ``theme.css:2659-2673`` renders only the *active* tab
+    in every medium, so in a PDF every second and third panel silently disappears. That loses all
     the expected-output panels a reader needs to check their work on paper, and at
     least one real instruction ("Follow the logs").
 

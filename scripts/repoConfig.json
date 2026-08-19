@@ -8,6 +8,10 @@
   "errorLevel": "warning",
   "googleServicesID": "",
   "marketingCode": "",
+  "deploymentPaths": [
+    { "key": "docker", "title": "Docker Compose" },
+    { "key": "k8s", "title": "Kubernetes / Helm" }
+  ],
   "shortcuts": [
     {
       "text": "Lab App on GitHub",
