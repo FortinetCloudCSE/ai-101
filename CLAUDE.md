@@ -10,7 +10,7 @@ A FortinetCloudCSE hands-on workshop — "AI 101 — Agents, MCP & the Agentic S
 
 | Layer | Tech | Port |
 |-------|------|------|
-| Site generator | Hugo v0.162.1 via `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest` | 1313 (local dev) |
+| Site generator | Hugo v0.165.0 via `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest` | 1313 (local dev) |
 | Site theme/config | [CentralRepo](https://github.com/FortinetCloudCSE/CentralRepo) — mounted at build time, **not** in this repo | — |
 | Local dev driver | [fortihugorunner](https://github.com/FortinetCloudCSE/fortihugorunner) CLI | — |
 | Hosting | GitHub Pages (`https://fortinetcloudcse.github.io/ai-101/`) | — |
@@ -92,7 +92,7 @@ Four traps when mounting a CentralRepo worktree to test an unmerged change, all 
 - **`local_copy.sh:3-4` copies this repo's `layouts/shortcodes/*` and `layouts/partials/*` over CentralRepo's — including into the mounted worktree.** So a local build can silently deposit this repo's files into a CentralRepo checkout and shadow the shared originals. Run `git status` **inside the worktree** after every local build.
 - **A fresh `git worktree add` leaves `themes/hugo-theme-relearn` empty**, and relearn is what defines the `print` output format, so the build dies with `unknown output format "print" for kind "home"` — an error that looks like a config regression and is not. `cp -a` the theme in from a populated checkout.
 
-Current build state (verified 2026-08-17, branch `jkopkoEdits`): exit 0, 36 pages, 7 non-page files, 13 static files, 19 HTML files. 2 WARNs, both real broken images — see below.
+Current build state (verified 2026-08-19, `main` at `a419517`, prod `:latest`): exit 0, 42 pages, 15 non-page files, 13 static files, 24 HTML files, **0 WARN**. The Hugo version behind `:latest` no longer drifts — CentralRepo's `Dockerfile` pins `FROM hugomods/hugo:std-0.165.0`, so a base-image release cannot change the renderer under you mid-workshop.
 
 ## Critical Patterns & Gotchas
 
