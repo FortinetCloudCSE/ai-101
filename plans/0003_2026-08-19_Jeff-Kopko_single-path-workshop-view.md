@@ -364,45 +364,45 @@ Landed as CentralRepo `56747bd` on branch `pathtabs-upstream`, one commit across
 Same class of defect, lower harm: irrelevant content visible, rather than two contradictory
 instruction sets visible.
 
-- [ ] P2.1. Build-time CSS in `custom-header.html` iterating `site.Pages` where `.Params.deploymentPath`
+- [x] P2.1. Build-time CSS in `custom-header.html` iterating `site.Pages` where `.Params.deploymentPath`
       is set, hiding each page's sidebar `<li>` for every other path, keyed on
       `#R-sidebar li[data-nav-id="<permalink>"]`. No JS, no flash — permalinks are known at build time.
-- [ ] P2.2. A direct-linked reader on a page for the other path gets "this page is for the other path",
+- [x] P2.2. A direct-linked reader on a page for the other path gets "this page is for the other path",
       with the switcher present — not a blank page.
-- [ ] P2.3. CentralRepo `topbar/button/prev.html` + `next.html`: skip pages whose `deploymentPath` does
+- [x] P2.3. CentralRepo `topbar/button/prev.html` + `next.html`: skip pages whose `deploymentPath` does
       not match. **Ships with P2.1, never after it** — relearn's prev/next honours only `params.hidden`
       (`_relearn/pageNext.gotmpl:88,98`, `pagePrev.gotmpl:65,76`), so hiding a page from the sidebar
       while leaving it on the linear path walks the student into a page the sidebar says does not exist.
-- [ ] P2.4. New `pathonly` shortcode for path-specific prose and sections outside tabs. Single-line
+- [x] P2.4. New `pathonly` shortcode for path-specific prose and sections outside tabs. Single-line
       open and close markers, `path=` its only attribute, `errorf` on a key not in `deploymentPaths`.
-- [ ] P2.5. `ai-101` content: `content/09Reference/_index.md:54-61` (`## Compose profiles`) into
+- [x] P2.5. `ai-101` content: `content/09Reference/_index.md:54-61` (`## Compose profiles`) into
       `pathonly`; `content/04MCP/_index.md:86,91` gated or reworded; `content/_index.md:66` reworded to
       read correctly before any choice exists.
-- [ ] P2.6. Verify: the three path-scoped pages absent from the sidebar and from prev/next for the
+- [x] P2.6. Verify: the three path-scoped pages absent from the sidebar and from prev/next for the
       other path; indicator present on all 14 authored pages.
 
 ### Phase 3 — search scoping
 
-- [ ] P3.1. Override `params.search.index.template` (`dependencies/search.html:22-24`) to emit each
+- [x] P3.1. Override `params.search.index.template` (`dependencies/search.html:22-24`) to emit each
       page's `deploymentPath` alongside its content.
-- [ ] P3.2. Filter results client-side by the active path, page-granular. CentralRepo already
+- [x] P3.2. Filter results client-side by the active path, page-granular. CentralRepo already
       overrides `dependencies/search-lunr.html`.
-- [ ] P3.3. Verify: searching a Docker-only term as a Kubernetes reader returns no path-scoped Docker
+- [x] P3.3. Verify: searching a Docker-only term as a Kubernetes reader returns no path-scoped Docker
       pages; searching with no choice stored returns everything.
 
 ### Phase 4 — make the leaks unrepeatable
 
-- [ ] P4.1. `ai-101/scripts/lint_paths.py`: a check that would have caught
+- [x] P4.1. `ai-101/scripts/lint_paths.py`: a check that would have caught
       `content/04MCP/_index.md:86` ("Docker service hostname") and `content/_index.md:66`
       ("Compose v2") — both slip today because `PATH_TOKENS` matches only
       `docker compose|exec|volume` (`:65-81`).
-- [ ] P4.2. Close or explicitly record the fence blind spot: check 3 runs after
+- [x] P4.2. Close or explicitly record the fence blind spot: check 3 runs after
       `if in_fence: continue` (`:240-241`), so path tokens in bare code fences outside a `pathtabs`
       block are never checked. Zero occurrences today, so this is prevention.
-- [ ] P4.3. Teach `gen_handouts.py` to flatten `pathonly` blocks. Verify `--check` passes and both
+- [x] P4.3. Teach `gen_handouts.py` to flatten `pathonly` blocks. Verify `--check` passes and both
       PDFs still build (`--disable-dev-shm-usage` remains non-optional,
       `handout-pdf.yml:129-130`).
-- [ ] P4.4. Recheck the tab/nesting state machines: `lint_paths.py:254-261` is an `if/elif` chain
+- [x] P4.4. Recheck the tab/nesting state machines: `lint_paths.py:254-261` is an `if/elif` chain
       that mis-tracks a `pathtabs` block nested in a plain `tabs` group, and `gen_handouts.py:308`
       rejects nesting. Make `pathonly` nesting either supported or a hard error — not silently wrong.
 - [ ] P4.5. Decide whether to unify the four path-vocabulary declarations (`pathtab.html`,
@@ -411,7 +411,7 @@ instruction sets visible.
 
 ### Phase 5 — document and close out
 
-- [ ] P5.1. CentralRepo `README.md` + `CLAUDE.md`: the mechanism, the three authoring forms
+- [x] P5.1. CentralRepo `README.md` + `CLAUDE.md`: the mechanism, the three authoring forms
       (`pathtabs`, `pathonly`, `deploymentPath` front matter), and the pre-paint requirement.
 - [x] P5.2. `ai-101/CLAUDE.md` + `k8s-101-workshop/CLAUDE.md:164` (which still says "copy `ai-101`'s
       shortcodes") updated to point at the upstream mechanism. The `k8s-101` side landed in PR #107
@@ -499,6 +499,60 @@ clears. Do not start P1 before P0.
      topbar buttons.** Those elements carry the theme's own responsive `display` rules
      (`[data-width-s="hide"]` and friends), and a show rule would defeat them. Rules are written as
      `html[data-deployment-path="X"] … :not(…X…) { display: none }`.
+- 2026-08-19, `Approved`, during Phase 2/3/4 implementation. Six more corrections; steps stay as
+  written, the shipped intent is here.
+  1. **P3.1 was not implemented. The search index entry shape is deliberately unchanged.** The step
+     says to override `params.search.index.template` (`dependencies/search.html:22-24`) so each entry
+     carries its page's `deploymentPath`. Rejected after reading the search stack: relearn generates
+     the index **once**, from `site.Home` (`search.html:60-65`), and feeds the same entries to two
+     engines that declare their fields independently — lunr's field list (`search-lunr.js:68-89`) and
+     orama's strict schema (`search-orama-esm.mjs:32-56`). A new field there is a theme-wide contract
+     change affecting every repo, and `index` is already a reserved name lunr writes into
+     (`search-lunr.js:86`). Instead `custom-header.html` emits a `uri → deploymentPath` side map from
+     `site.Pages` and wraps `relearn.search.adapter.search`, filtering the returned
+     `{index, matches, page}` array. `uri` is already a unique per-page identity and reaches both
+     call sites (`search.js:130-133` results page, `:178-181` dropdown), so one wrapper covers both
+     surfaces and the count at `:133` follows automatically. Not default-deny, matching P2.1: with no
+     choice stored, search returns everything.
+  2. **Search needed a cache invalidation nobody had specified.** `auto-complete.js` caches by raw
+     input value (`:152-154`) with `cache: 1` on by default (`:51`) and prunes by prefix on read
+     (`:226-233`), so a term typed before a path switch keeps serving the old path's hits — and a
+     cached prefix with zero results short-circuits every longer term. The `forti:pathchange`
+     listener clears `box.cache` / `box.last_val` on `#R-search-by` (the element *is* the instance's
+     `that`, `:75-76`) and re-runs an open results page. The instance's own `destroy()` is
+     unreachable, discarded at `search.js:173`.
+  3. **`pathonly` must be called with `{{% %}}`, and this is a correctness constraint, not a style
+     one.** With `{{< >}}` the shortcode has to render its body via `RenderString`, which runs in its
+     own render context: headings inside the block never join the page's fragment set, so an in-page
+     `[link](#heading)` into it builds with `WARN … heading ID "…" not found`, does nothing when
+     clicked, and the heading is absent from the TOC. Found as a real warning on
+     `content/09Reference/_index.md` (`#compose-profiles`). Handing `.Inner` back to the page's own
+     markdown pass fixes all three. Consequence for P4.1/P4.3: `{{< pathonly >}}` is the linter
+     violation and `{{% pathonly %}}` the correct form — the inverse of what the tooling first
+     enforced.
+  4. **The `pathonly` wrapper needs blank lines around the body, and they are load-bearing.** A line
+     starting with `<div` opens a CommonMark type-6 raw-HTML block that runs to the next blank line,
+     which swallowed the body's first block and emitted it literally — a leading `## Heading`
+     rendered as the characters `## Heading` next to a correctly rendered table. Diagnosed only by
+     building and reading the output.
+  5. **Two `errorf` guards added to P2.1 that the step did not anticipate.** `menu.html` overrides
+     `$url` for `menuPageRef`/`menuUrl` (`:130,:133,:137`), so a crosslinked page's `data-nav-id`
+     names the *target*, and a generated rule would match nothing — the page would stay visible to
+     every path, silently. Likewise a scoped page with no permalink renders headless with
+     `data-nav-id=""` (`:149`), and a rule keyed on the empty string would hide every headless entry
+     instead of that one. `data-nav-id` is the only page identity on the `<li>`, so there is no
+     second attribute to fall back to and no best-effort rule to write; both are hard errors.
+     Related refinement: the sidebar hide rule carries `:not(.active)` so a reader who arrives on a
+     foreign page from a bookmark or search result still sees their own location in the TOC. It leaks
+     nothing — the `pathmiss` banner already names the mismatch, and an entry for the page already on
+     screen reveals no steps.
+  6. **P4.5 resolved as "unify", with `scripts/repoConfig.json` as the single source.** The four
+     declarations were `deploymentPaths` in `repoConfig.json`, `PATHS` in `gen_handouts.py`,
+     `PATH_KEYS` in `lint_paths.py`, and a hardcoded slug loop in `handout-pdf.yml:125`.
+     `repoConfig.json` wins because it is the one Hugo actually reads at build time; the other three
+     were copies free to drift. `gen_handouts.py` now derives keys and titles from it (keeping `slug`
+     and `weight` local, as generator concerns) and exposes `--list-slugs` for the workflow;
+     `lint_paths.py` imports from `gen_handouts.py`.
 
 ## Files Changed
 
@@ -517,6 +571,36 @@ CentralRepo, branch `pathtabs-upstream`, commit `56747bd`:
 `pathtab.html` deliberately untouched — `gen_handouts.py:93` is anchored on its exact signature.
 
 `ai-101` `scripts/repoConfig.json` (P1.6) is in PR #19, unmerged.
+
+CentralRepo, branch `pathgate-p234` (Phases 2 and 3), unpushed:
+
+- `c4053c4` Phase 2. `custom-header.html` sidebar rules built from `permalink.gotmpl` plus the two
+  `errorf` guards; new `layouts/shortcodes/pathonly.html`; new `layouts/partials/pathnav/step.gotmpl`
+  and the per-path variants in `topbar/button/{prev,next}.html`; `content-header.html` `pathmiss`
+  banners for a foreign-path reader.
+- `adb6309` docs. `README.md` and `RELEASE_NOTES.md` rewritten to describe the gate that shipped —
+  the stale `[Unreleased]` entry still described the `MutationObserver` + `.Page.Store` design PR #72
+  replaced — with the blast radius corrected from ~12 repos to 65.
+- `8cc181f` Phase 3. Search scoping in `custom-header.html`: the `uri → deploymentPath` side map, the
+  `relearn.search.adapter.search` wrapper, and the `forti:pathchange` autocomplete-cache reset.
+
+`ai-101`, branch `pathgate-p4-tooling` (Phases 2.5 and 4), unpushed:
+
+- `3cc8ae6` P4.1-P4.4 in `scripts/lint_paths.py` + `scripts/gen_handouts.py`.
+- `450d6ea` P2.5 content. `content/09Reference/_index.md`'s `## Compose profiles` into `pathonly`,
+  the other two leaks reworded; all seven now-dead `ALLOWLIST` entries removed — the earlier count of
+  five was wrong, and the two extra were proven dead rather than assumed.
+- `b65a762` the `{{% %}}` delimiter fix on the two `pathonly` calls.
+
+Verification carried out per phase rather than at the end: the sidebar selectors were compared
+byte-for-byte against the rendered `data-nav-id` values (including the `index.html`-append branch,
+exercised with a throwaway `deploymentPath` on a section page); P3.3 was proven behaviourally by
+rebuilding the real lunr index in Node from `public/searchindex.en.js` and running the actual filter
+(no choice → 13/13 and 8/8; `kubectl` as a Docker reader → 5/8, dropping all three Kubernetes pages;
+`prerequisites` → 6/8 each way); and the no-regression claim was re-proven after **both** Phase 2 and
+Phase 3 by building `faig-training-workshop` against the modified theme — 36 pages, 173 files, 0
+differing after normalising the cache-buster, image hashes, anonymous tab-group hashes and both
+timestamp formats.
 
 ## Session Summary
 
