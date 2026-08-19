@@ -2,7 +2,7 @@
 Date: 2026-08-19
 Owner: Jeff Kopko
 Slug: single-path-workshop-view
-Status: Proposed
+Status: Approved
 Supersedes: none
 Superseded-By: none
 Plan File: plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.md
@@ -16,6 +16,36 @@ A participant chooses Docker Compose or Kubernetes/Helm once, and from then on t
 **only** that path — in the page body, in the sidebar, in prev/next navigation, and in search — with
 the active path visible on every page and changeable in one click from anywhere. Tab-sync stops
 being the mechanism and becomes only the no-JavaScript fallback.
+
+## Root cause, confirmed by Jeff 2026-08-19
+
+**Participants attempted to do both the Docker steps and the Kubernetes steps, because both tabs were
+on the page.** Not a persistence failure, not a subtle mis-read — they executed both paths.
+
+This narrows the five leaks in the spec from "five things of unknown relative weight" to one dominant
+cause with four lesser ones, and it reorders the work: gating the tab panels is the fix for the
+reported incident and moves into Phase 1. The sidebar, prose, search and tooling leaks are the same
+class of defect and still get fixed, but they are not what happened.
+
+It also raises the bar on the fallback. "Degrades to showing both paths" was written as the *safe*
+fallback in the spec. Given what actually went wrong, showing both paths **is** the failure mode. Any
+state that shows both — no choice yet, JavaScript off — must say so loudly rather than look normal.
+
+### Decisions taken with it
+
+- **Runtime pre-paint gate, not build-time variants.** Jeff: "As long as the user can make and change
+  their choice, it's clear to them which path they're on, and we don't break other repos, we should go
+  with your recommendation." Comparison below.
+- **Changing CentralRepo is approved.** Jeff: "If we change CentralRepo that's fine. The remaining 65
+  repos only ever touch it when they rebuild...not immediately." The no-op-when-`deploymentPaths`-absent
+  requirement still stands — that is what makes the staggered rebuild safe rather than merely slow.
+- **A reader with no stored choice is blocked, not shown both.** Jeff chose the blocking chooser:
+  "it's likely if the instructor is sending a link the participant has already chosen a path, but this
+  will eliminate that potential pitfall." This inverts the CSS to **default-deny**: gated content is
+  hidden until an explicit choice exists. Consequence for JS-off, which cannot set the attribute and
+  would therefore be blocked out entirely — a `<noscript>` rule un-hides everything *and* renders an
+  explicit "both paths are shown below, follow only one" warning. That is the one state where both
+  paths appear, and it announces itself.
 
 ## Context / Links
 
@@ -103,47 +133,73 @@ Verified this session; each one killed or shaped an option.
 
 ## Decisions & Commentary
 
-### Rejected: hide the non-selected tab and stop there
+### Hiding the non-selected tab: necessary, and now first — but still not sufficient alone
 
-This is what the question "is there a way to hide tabs for the non selected choice?" literally asks
-for, it is a one-line CSS rule, and it is safe to do. It is still the wrong deliverable on its own,
-for three reasons that are independent of each other:
+This is what "is there a way to hide tabs for the non selected choice?" literally asks for, it is a
+one-line CSS rule, and it is safe: no theme JS measures, focuses or scroll-positions a non-active
+`.tab-nav-button`, there is no tab-overflow logic, `switchTab` only touches `event.target` and
+`fixCodeTabs` only reads `classList`.
 
-- **It reaches 6 of 14 pages.** Only 6 pages contain a `pathtabs` block. The three whole path-scoped
-  pages, the Docker-only `## Compose profiles` section at `content/09Reference/_index.md:54-61`, and
-  the unmarked Docker prose at `content/04MCP/_index.md:86,91` are all outside any tab.
-- **It removes the switcher.** Today the tab *is* how a student changes their mind. Hide it without
-  replacing it and a student who picked wrong has no visible way out.
-- **It makes the flash worse.** Today the wrong tab being briefly active is visibly a UI settling,
-  because both tabs are on screen. With one tab, the student briefly sees the *wrong path's content
-  as the only content* — it reads as authoritative rather than as unfinished loading.
+Given the confirmed root cause it is also the single highest-value change in this plan, so it moves
+from Phase 2 to Phase 1. Three things still have to ship with it rather than after it:
 
-Keep the CSS rule; it is step P2.2. Do not ship it alone.
+- **A replacement switcher.** Today the tab *is* how a student changes their mind. Hide it with
+  nothing in its place and a student who picked wrong has no visible way out — which converts a
+  recoverable mistake into a stuck one.
+- **The pre-paint attribute.** With both tabs on screen, a brief wrong-tab-active state reads as UI
+  settling. With one tab, the student briefly sees the *wrong path's content as the only content*,
+  which reads as authoritative. Hiding the tab without fixing the flash makes the flash more
+  dangerous, not less.
+- **Default-deny, so no-choice never renders a path.** Server-side, relearn marks tab #1 active
+  (`shortcodes/tabs.html:69,80`), i.e. Docker. Hiding non-active tabs with no stored choice would
+  present Docker as *the* path to a Kubernetes student — exactly the reported failure, inverted.
 
-### Rejected: build-time variants (two output trees, student routed to one)
+It reaches 6 of 14 pages, so the remaining leaks (three whole path-scoped pages,
+`content/09Reference/_index.md:54-61`, `content/04MCP/_index.md:86,91`) still need Phase 2. But those
+are "irrelevant content is visible", not "two contradictory instruction sets are visible".
 
-The genuinely thorough answer, and the one that would fix search, print, and no-JS for free. Rejected
-now, on plumbing rather than on principle:
+### Build-time variants vs runtime gate — the full comparison
 
-- Two passes need `hugo_build.sh` + `local_copy.sh` changes, and `--cleanDestinationDir` deletes the
-  previous pass. That part is merely work.
-- The real cost is a URL change in every opted-in repo — today that is **`ai-101` alone**, ~14 page
-  URLs gaining one segment. Corrected from an earlier claim of "every published URL across ~12
-  repos": the 65 repos share the *image*, not the URL scheme, and a repo that never sets
-  `deploymentPaths` builds a single tree at its current URLs. What actually breaks is narrower than
-  stated but still real — existing deep links into `ai-101` (slide decks, QR codes, chat history),
-  cross-repo links, and the handout PDFs' internal links.
-- Compute is not the objection: 639 ms per pass, in a 40-60 s pipeline.
-- Genuine advantages this option has and the runtime gate does not: search scoping and print/PDF
-  single-path output come free, and it works with JavaScript disabled.
-- Genuine remaining cost: "change your choice" needs a current-URL → sibling-URL mapping, and the
-  publish tail (`--cleanDestinationDir`, one `docker cp`, one Pages artifact) needs reworking.
+Build-time means two Hugo passes producing two output trees, one per path, and the student is routed
+to one (`/ai-101/k8s/01Intro/`). Runtime means one tree, with a `data-deployment-path` attribute set
+on `<html>` before paint and CSS gating everything off it.
 
-**Net: this option is stronger than plan text originally implied.** It is still not the
-recommendation, because it hinges entirely on the URL question below being answered "yes" — but the
-deciding factor is that question, not cost.
+| | Build-time variants | Runtime pre-paint gate |
+|---|---|---|
+| Other path present in delivered HTML | **No — genuinely absent** | Yes, `display:none` |
+| Works with JavaScript disabled | **Yes** | No — falls back to both paths + explicit warning |
+| Fixes the confirmed root cause (both step sets visible) | Yes | Yes |
+| Search scoping | **Free, including within-page** | Page-granular, needs an index-template override |
+| Print / PDF | **Free** | Fine — CSS-hidden content does not print; handouts already single-path |
+| Shareable link carries the path | **Yes** | No |
+| URL churn | ~14 `ai-101` URLs gain a segment; breaks existing deep links, slide decks, QR codes, handout internal links | **None** |
+| "Change your choice" | Needs a current-URL → sibling-URL map + redirect on every page | **Flip an attribute; instant, no navigation, works from any page** |
+| Switching *from* a path-scoped page | **Broken by construction** — `2_prereqs_k8s` exists only in the k8s tree, so there is no sibling to switch to; needs a bespoke fallback | Page says "this page is for the other path", switcher still present |
+| CentralRepo pipeline work | Two passes, `--cleanDestinationDir` conflict, `local_copy.sh` arg passthrough, `static.yml` publishing two trees into one `docs/` | **None — one pass, one `docker cp`, one Pages artifact, unchanged** |
+| Effect on the other 64 repos | No-op if they never set `deploymentPaths`, but the pipeline they run is rewritten | **No-op, and the pipeline is untouched** |
+| Hugo build cost | 2 x 639 ms — irrelevant | 639 ms |
+| Reversibility | URL scheme is a public contract; hard to walk back | **Delete a partial and a CSS block** |
 
-Revisit only if the URL question below is answered "yes, the path belongs in the URL".
+**Chosen: runtime.** Against Jeff's three stated criteria it wins on two and ties on one:
+
+- *"the user can make and change their choice"* — runtime wins decisively. An attribute flip changes
+  the current page in place from anywhere. Build-time needs a URL mapping, and that mapping has no
+  answer at all on the three path-scoped pages, which is precisely where a mis-chosen student is most
+  likely to notice their mistake.
+- *"it's clear to them which path they're on"* — tie. Both support a persistent indicator.
+- *"we don't break other repos"* — runtime wins. It changes no pipeline file, so the other 64 repos
+  rebuild against an image whose build path is identical. Build-time rewrites `hugo_build.sh`,
+  `local_copy.sh` and `static.yml`, which every one of those repos executes; a bug there is a
+  64-repo outage discovered one repo at a time as they happen to rebuild.
+
+Build-time's real advantages are JS-off support and free search/print scoping. The first is
+mitigated (`<noscript>` un-hides with a warning — the current behaviour plus an explanation, so
+strictly better than today) and the second is Phase 3 work rather than an impossibility. Neither is
+worth the URL contract or a rewrite of the pipeline all 65 repos run.
+
+**What would change the decision:** an answer of "yes, the path belongs in the URL" — i.e. instructors
+must be able to send a path-specific link. Jeff's Q3 answer points the other way (participants
+receiving links have typically already chosen), so this is settled unless that turns out to be wrong.
 
 ### Rejected: Hugo multilingual as the variant carrier (one "language" per path)
 
@@ -225,58 +281,69 @@ rest is optional rather than half-finished.
 
 ### Phase 0 — gate
 
-- [ ] P0.1. CentralRepo PR #71 merged, prod image rebuilt, digest confirmed moved (plan 0002 S2).
-      Nothing below can be verified before this.
-- [ ] P0.2. Answer the URL question in Open Questions. If the answer is "path belongs in the URL",
-      **stop** — this plan is superseded, not amended (a new numbered plan with `Supersedes: 0003`).
+- [x] P0.1. The URL question is settled: **no**, the path stays out of the URL. Runtime gate chosen.
+- [ ] P0.2. CentralRepo PR #71 merged, prod image rebuilt, digest confirmed moved (plan 0002 S2).
+      Nothing below can be verified before this. Approved by Jeff 2026-08-19.
 
-### Phase 1 — the attribute, the indicator, and the three known leaks
+### Phase 1 — stop both instruction sets being visible
 
-- [ ] P1.1. CentralRepo `layouts/partials/custom-header.html`: add the pre-paint initialiser. Reads
-      localStorage key `window.relearn.absBaseUri + '/deployment-path'`, validates the value against
-      the keys in `site.Params.deploymentPaths`, sets
-      `document.documentElement.dataset.deploymentPath`. No-ops entirely when `deploymentPaths` is
-      unset, so the other repos are untouched. Set the flag on `documentElement` — `document.body`
-      does not exist at this point.
-- [ ] P1.2. Same file: emit build-time CSS iterating `site.Pages` where `.Params.deploymentPath` is
-      set, hiding each page's sidebar `<li>` for every *other* path, keyed on
-      `#R-sidebar li[data-nav-id="<permalink>"]`. Also hide the page body itself with a "this page is
-      for the other path" message rather than a blank page, for anyone who arrives by direct link.
-- [ ] P1.3. CentralRepo `topbar/button/prev.html` + `next.html`: skip pages whose `deploymentPath`
-      does not match the active path. Ships with P1.2, not after it.
-- [ ] P1.4. CentralRepo `content-header.html`: the always-visible indicator and switcher — active
-      path plus a control to change it, on every page including the 8 with no `pathtabs` block.
-      Writes the localStorage key and updates `data-deployment-path` live, no reload. Renders nothing
-      when `deploymentPaths` is unset. Pre-choice state must read as "not chosen yet", not as a
-      default.
-- [ ] P1.5. CentralRepo: new `pathonly` shortcode for path-specific prose and sections outside tabs.
-      Single-line open and close markers, `path=` as its only attribute, `errorf` on a key not in
-      `deploymentPaths`. Wrapper carries the path so P1.1's attribute gates it.
-- [ ] P1.6. `ai-101` content: gate the three known leaks — `content/09Reference/_index.md:54-61`
-      (`## Compose profiles`) in `pathonly`, `content/04MCP/_index.md:86,91` gated or reworded, and
-      `content/_index.md:66` reworded to read correctly before any choice exists.
-- [ ] P1.7. `ai-101` `scripts/repoConfig.json`: `deploymentPaths` (also required by plan 0002's B2 —
-      coordinate so it lands once, not twice).
-- [ ] P1.8. Verify: 42 pages / 0 WARN; the three path-scoped pages absent from the sidebar and from
-      prev/next for the other path; indicator present on all 14 authored pages; the 16 non-path tab
-      groups byte-identical in the built HTML; `k8s-101-workshop` output byte-identical with no new
-      warnings.
+Everything in this phase exists to fix the confirmed root cause. Nothing here is optional and nothing
+ships alone; P1.1-P1.5 are one deliverable in five files.
 
-### Phase 2 — single-path rendering inside `pathtabs`, and killing the flash
+- [ ] P1.1. CentralRepo `layouts/partials/custom-header.html`: pre-paint initialiser. Reads
+      localStorage key `window.relearn.absBaseUri + '/deployment-path'`, validates against the keys in
+      `site.Params.deploymentPaths`, sets `document.documentElement.dataset.deploymentPath`. No-ops
+      entirely when `deploymentPaths` is unset. Set it on `documentElement` — `document.body` does not
+      exist at this point. Emitted at `baseof.html:41`, synchronous, after `dependencies.html`, so
+      `window.relearn.absBaseUri` is available and nothing has painted.
+- [ ] P1.2. Same file: the **default-deny** CSS. Path-gated content is hidden when
+      `html` has no `data-deployment-path`, and shown only for the matching path. Must be scoped to
+      path blocks — a global non-active-tab rule would suppress the 16 command-vs-output tab groups,
+      including the 3-tab group at `content/01Intro/2_prereqs_k8s/index.md:127-157` whose middle tab
+      is an instruction. Verify the selector beats `#R-body .tab-content.active`
+      (`theme.css:2659-2673`) on specificity without `!important` — measure, do not assume, because
+      `!important` here leaks into print and the handout PDFs.
+- [ ] P1.3. `pathtabs` emits a per-path wrapper inside each tab's content, so the CSS gates on the
+      path key rather than on relearn's derived `data-tab-item` (`anchorize(title)+anchorize(icon)`,
+      so "Docker Compose" → `docker-compose`, not `docker`). **Do not add an attribute to `pathtab`** —
+      `gen_handouts.py:93` is anchored on its exact current signature and breaks silently.
+      Hide `.tab-nav` inside path blocks once a path is chosen.
+- [ ] P1.4. CentralRepo `content-header.html`: the persistent indicator and switcher, on every page
+      including the 8 with no `pathtabs` block. Names the active path; changes it in one interaction;
+      writes localStorage and updates the attribute live with no reload. Renders nothing when
+      `deploymentPaths` is unset.
+- [ ] P1.5. The **no-choice chooser** (Jeff's Q3 answer: block, do not show both). With no stored
+      path, gated content stays hidden and the page presents the choice instead. Plus a `<noscript>`
+      block that un-hides everything *and* renders an explicit warning — "JavaScript is off, so both
+      paths are shown below; follow only one". That is the sole state where both instruction sets
+      appear and it must announce itself, because showing both silently is the exact reported failure.
+- [ ] P1.6. `ai-101` `scripts/repoConfig.json`: `deploymentPaths` (also plan 0002 B2 — land it once).
+- [ ] P1.7. Verify: 42 pages / 0 WARN. The correct path paints first with no post-`DOMContentLoaded`
+      content mutation. With storage cleared, no lab page shows any path's steps. With JS disabled,
+      both paths show *and* the warning is present. The 16 non-path tab groups byte-identical in the
+      built HTML. `k8s-101-workshop` output byte-identical, no new warnings. Handout PDFs still build.
 
-- [ ] P2.1. `pathtabs` emits a per-path wrapper inside each tab's content so CSS can gate on the
-      path key rather than on relearn's derived `data-tab-item` (which is
-      `anchorize(title)+anchorize(icon)`, so "Docker Compose" → `docker-compose`, not `docker`).
-      **Do not add an attribute to `pathtab`** — `gen_handouts.py:93` is anchored on its exact
-      signature.
-- [ ] P2.2. Gate the panels on `data-deployment-path`, overriding relearn's
-      `#R-body .tab-content{display:none}` / `.active{display:block}` (`theme.css:2659-2673`).
-      Confirm the selector wins on specificity without `!important` — an id plus attributes should
-      beat `#R-body .tab-content.active`, but measure it, do not assume.
-- [ ] P2.3. Hide the `.tab-nav` inside path blocks **only when a path is chosen**; show it otherwise.
-      Scoped to path blocks — never a global non-active-tab rule (see Constraints).
-- [ ] P2.4. Verify no post-`DOMContentLoaded` content mutation remains: the correct path is what
-      paints first. Also verify the pre-choice and JS-disabled states still show both paths as tabs.
+### Phase 2 — the four lesser leaks
+
+Same class of defect, lower harm: irrelevant content visible, rather than two contradictory
+instruction sets visible.
+
+- [ ] P2.1. Build-time CSS in `custom-header.html` iterating `site.Pages` where `.Params.deploymentPath`
+      is set, hiding each page's sidebar `<li>` for every other path, keyed on
+      `#R-sidebar li[data-nav-id="<permalink>"]`. No JS, no flash — permalinks are known at build time.
+- [ ] P2.2. A direct-linked reader on a page for the other path gets "this page is for the other path",
+      with the switcher present — not a blank page.
+- [ ] P2.3. CentralRepo `topbar/button/prev.html` + `next.html`: skip pages whose `deploymentPath` does
+      not match. **Ships with P2.1, never after it** — relearn's prev/next honours only `params.hidden`
+      (`_relearn/pageNext.gotmpl:88,98`, `pagePrev.gotmpl:65,76`), so hiding a page from the sidebar
+      while leaving it on the linear path walks the student into a page the sidebar says does not exist.
+- [ ] P2.4. New `pathonly` shortcode for path-specific prose and sections outside tabs. Single-line
+      open and close markers, `path=` its only attribute, `errorf` on a key not in `deploymentPaths`.
+- [ ] P2.5. `ai-101` content: `content/09Reference/_index.md:54-61` (`## Compose profiles`) into
+      `pathonly`; `content/04MCP/_index.md:86,91` gated or reworded; `content/_index.md:66` reworded to
+      read correctly before any choice exists.
+- [ ] P2.6. Verify: the three path-scoped pages absent from the sidebar and from prev/next for the
+      other path; indicator present on all 14 authored pages.
 
 ### Phase 3 — search scoping
 
@@ -328,6 +395,13 @@ clears. Do not start P1 before P0.
 
 ## Plan Changes
 
+- 2026-08-19, `Proposed` → `Approved`. Root cause confirmed (participants ran both step sets because
+  both tabs were visible), so the plan was restructured before approval: tab-panel gating moved from
+  Phase 2 into Phase 1 as the fix for the actual incident, and the sidebar/prose/prev-next leaks moved
+  down to Phase 2. The CSS was inverted to default-deny and a blocking no-choice chooser plus a
+  `<noscript>` escape hatch added, per Jeff's Q3 answer. The build-time-vs-runtime rejection was
+  replaced with a full comparison table. Substance edits are legitimate here because the plan was
+  still `Proposed` when they were made.
 - 2026-08-19, still `Proposed`: two factual corrections after measuring rather than recalling.
   (1) The shared-image blast radius is **65 repos**, not "~12" as plans 0001-0002 said. (2) The
   build-time-variant option's cost was overstated — a path carried as a URL *subdirectory* does not
@@ -350,19 +424,26 @@ clears. Do not start P1 before P0.
 
 ## Risks / Open Questions
 
-- **Open question, blocking Phase 0: does the path belong in the URL?** Client-side storage means a
+- ~~**Open question, blocking Phase 0: does the path belong in the URL?**~~ **Answered: no.** Client-side storage means a
   pasted link carries no path and an instructor cannot send "the Kubernetes version of this page" —
   a real workshop scenario. Putting it in the URL fixes sharing and makes search scoping trivial, but
   changes every published URL across the estate and collides with `baseURL` being derived from
   `repoName`, which doubles as the analytics ID and quiz key. A "yes" supersedes this plan rather
   than amending it.
-- **Open question: has anyone asked what the participants actually did?** All five leaks are verified
+- ~~**Open question: has anyone asked what the participants actually did?**~~ **Answered: they ran
+  both the Docker and the Kubernetes steps, because both tabs were on the page.** The text below is
+  kept because its reasoning still holds for the four *lesser* leaks, whose relative weight remains
+  unmeasured.
+- (superseded) has anyone asked what the participants actually did? All five leaks are verified
   in code; their relative weight is not. If the dominant cause is the sidebar listing both prereq
   pages, Phase 1 alone is the fix and Phases 2–3 are polish. Worth asking whoever collected the
   reports before building the general mechanism.
-- **Open question: what does a deep-linked reader with no stored choice see on a lab page?** Showing
+- ~~**Open question: what does a deep-linked reader with no stored choice see on a lab page?**~~
+  **Answered: blocked, with a chooser.** Jeff: "it's likely if the instructor is sending a link the
+  participant has already chosen a path, but this will eliminate that potential pitfall." Original
+  framing: Showing
   both is safe but is today's confusing state; redirecting to the chooser is opinionated and traps
-  browsers. Phase 1 assumes "show both, indicator says not chosen".
+  browsers. Phase 1 now blocks; the "show both" state survives only behind `<noscript>`, with a warning.
 - Risk: the CSS specificity fight with `theme.css:2659-2673` needs `!important`, which then leaks
   into print and the handouts. Mitigation: P2.2 measures before committing; the handout PDFs are the
   regression test.
