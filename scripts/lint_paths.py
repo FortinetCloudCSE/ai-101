@@ -19,10 +19,9 @@ This linter is the guardrail for that invariant. It checks:
    most likely place for this leak to appear, not the least
 4. ``cd "~`` anywhere -- bash does not expand ``~`` inside double quotes, so the
    command always fails
-5. block markup that either tool would silently mis-parse: a ``{{% pathonly %}}``
-   written with ``pathtab``'s delimiters, an unknown ``path=`` key, a path block
-   nested in another, a marker sharing a line with anything else, and any block
-   still open at end of file
+5. block markup that either tool would silently mis-parse: a block written with the
+   other delimiter form, an unknown ``path=`` key, a path block nested in another, a
+   marker sharing a line with anything else, and any block still open at end of file
 6. stale generated handouts (delegates to ``gen_handouts.py --check``)
 
 Usage
@@ -30,9 +29,10 @@ Usage
     python3 scripts/lint_paths.py            # lint, exit 1 on any violation
     python3 scripts/lint_paths.py --list     # print the config and exit
 
-Reusing this in another workshop repo: keep the CONFIG block's structure and empty
-out ``PATH_TITLE_RE``, ``PATH_TOKENS`` and ``ALLOWLIST``. Checks 1 and 3 then no-op
-and the repo still gets checks 2, 4 and 5.
+Reusing this in another workshop repo: take ``gen_handouts.py`` with it -- this file
+imports the path vocabulary and the marker grammar from it -- then keep the CONFIG
+block's structure and empty out ``PATH_TITLE_RE``, ``PATH_TOKENS`` and ``ALLOWLIST``.
+Checks 1 and 3 then no-op and the repo still gets checks 2, 4 and 5.
 """
 
 from __future__ import annotations
@@ -42,6 +42,25 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+# The marker grammar and the path vocabulary are the handout generator's, imported
+# rather than restated. Two copies of "what a marker looks like" is this linter's own
+# failure mode one level up: when the two scripts disagree, the linter passes a page the
+# generator cannot parse, or reports a block the generator ignores. A plain sibling
+# import works because this script is always run as a script, so ``sys.path[0]`` is
+# ``scripts/`` -- the two files travel together as a pair.
+#
+# This also makes the linter depend on scripts/repoConfig.json, which is where the
+# generator reads the paths from. Deliberate: a linter enforcing a vocabulary the site
+# is not built with would be worse than one that refuses to start.
+from gen_handouts import (
+    BLOCK_DELIMS,
+    BLOCK_MARKER_RE,
+    FENCE_RE,
+    FRONT_MATTER_DELIM,
+    PATHS,
+    marker_form,
+)
 
 # ==========================================================================
 # CONFIG -- the path vocabulary. Everything repo-specific lives in this block.
@@ -58,10 +77,11 @@ GENERATED_DIRS = [CONTENT / "09Reference" / "handouts"]
 # Front-matter key that marks a whole page as belonging to one path.
 PAGE_PATH_KEY = "deploymentPath"
 
-# Keys accepted by the pathtab shortcode, which now lives in CentralRepo. Must match
-# the `key` fields of `deploymentPaths` in scripts/repoConfig.json -- the site param
-# that shortcode reads -- and PATHS in scripts/gen_handouts.py.
-PATH_KEYS = ["docker", "k8s"]
+# Keys accepted by the pathtab/pathonly shortcodes, which now live in CentralRepo and
+# read `deploymentPaths` from scripts/repoConfig.json. Derived, not restated: PATHS is
+# itself built from that file, so this linter enforces the same vocabulary Hugo builds
+# with. Adding a path is a one-file edit.
+PATH_KEYS = [p["key"] for p in PATHS]
 
 # A tab title matching this is a path switch. Catching it in a plain `tabs` group
 # is the point: such a group has its own random groupid, so clicking it does not
@@ -144,27 +164,6 @@ ALLOWLIST: list[dict] = [
 # ==========================================================================
 # Implementation
 # ==========================================================================
-
-FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
-FRONT_MATTER_DELIM = "---"
-
-# Every block marker worth tracking, in one pattern, so a line can be scanned for all
-# of them left to right. Three properties of this scan are each load-bearing:
-#
-# * it finds *every* marker on a line, where an ``if/elif`` chain of one-marker checks
-#   found only the first. A line carrying a close and the next open, or a whole group
-#   opened and closed on one line, used to register one transition and leave the
-#   tracker stuck on for the rest of the file.
-# * it captures the delimiter, so ``{{% pathonly %}}`` -- a copy of ``pathtab``'s
-#   delimiter style -- is reported rather than silently accepted.
-# * it keeps ``pathtabs`` ahead of ``tabs`` in the alternation, so the shorter name
-#   never claims the longer one's marker.
-#
-# The inner ``pathtab`` / ``tab`` markers are not matched and do not need to be: this
-# linter cares which *block* it is inside, not which tab.
-BLOCK_MARKER_RE = re.compile(
-    r"\{\{(?P<delim>[<%])\s*(?P<close>/\s*)?(?P<name>pathtabs|pathonly|tabs)\b(?P<args>[^}]*?)[%>]\}\}"
-)
 
 # Backticked prose is not markup. A sentence mentioning `{{< pathtabs >}}` inline used
 # to flip the tracker on and suppress every path-token check to the end of the file,
@@ -295,17 +294,16 @@ def lint_page(md: Path) -> list[Violation]:
             markers = list(BLOCK_MARKER_RE.finditer(markup))
             for marker in markers:
                 name = marker.group("name")
-                if marker.group("delim") == "%":
+                if marker.group("delim") != BLOCK_DELIMS[name]:
                     violations.append(
                         Violation(
                             md,
                             i,
                             "wrong-delimiter",
-                            f"write {name} with angle brackets, {{{{< ... >}}}}, not "
-                            f"{{{{% ... %}}}} -- {name} emits its own HTML wrapper and the "
-                            "percent form runs that output back through the markdown "
-                            "renderer, which mangles it silently; for a path block the "
-                            "result is content that renders ungated",
+                            f"write {name} as {marker_form(name)} -- the delimiter is part "
+                            "of the shortcode's contract, and the wrong one fails silently: "
+                            "the block renders, but ungated, and any heading inside it drops "
+                            "out of the page's fragment set so in-page links to it go dead",
                             line,
                         )
                     )
@@ -414,7 +412,7 @@ def lint_page(md: Path) -> list[Violation]:
                     len(lines),
                     f"unclosed-{name}",
                     f"{open_blocks} {name} block(s) still open at end of file; give every "
-                    f"{{{{< {name} ... >}}}} a matching {{{{< /{name} >}}}}",
+                    f"{marker_form(name)} a matching close marker",
                     "",
                 )
             )
@@ -423,9 +421,10 @@ def lint_page(md: Path) -> list[Violation]:
 
 
 def check_handouts() -> list[str]:
+    # Still a subprocess rather than a call into the imported module: --check has to
+    # compare what a *fresh* run writes against what is on disk, and the generator's
+    # exit status and stderr are the contract this reports.
     gen = REPO_ROOT / "scripts" / "gen_handouts.py"
-    if not gen.is_file():
-        return []
     proc = subprocess.run(
         [sys.executable, str(gen), "--check"], capture_output=True, text=True
     )
@@ -442,6 +441,7 @@ def main() -> int:
     if args.list:
         print(f"path keys:   {', '.join(PATH_KEYS) or '(none)'}")
         print(f"page marker: {PAGE_PATH_KEY}")
+        print(f"markers:     {', '.join(marker_form(n) for n in BLOCK_DELIMS)}")
         print("tokens:")
         for label, token in PATH_TOKENS:
             print(f"  {label:26} {token.pattern}")
