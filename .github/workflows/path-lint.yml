@@ -14,6 +14,10 @@ on:
       - "layouts/shortcodes/pathtab*.html"
       - "scripts/gen_handouts.py"
       - "scripts/lint_paths.py"
+      # gen_handouts.py derives PATHS from deploymentPaths here, and lint_paths.py
+      # imports PATHS from it -- so editing this file changes what the linter
+      # enforces and must trigger it.
+      - "scripts/repoConfig.json"
       - ".github/workflows/path-lint.yml"
   # Direct pushes to main skip the pull_request trigger entirely — d512c5c did
   # exactly that, hand-edited the handouts, and left handout-k8s stale.
@@ -24,6 +28,10 @@ on:
       - "layouts/shortcodes/pathtab*.html"
       - "scripts/gen_handouts.py"
       - "scripts/lint_paths.py"
+      # gen_handouts.py derives PATHS from deploymentPaths here, and lint_paths.py
+      # imports PATHS from it -- so editing this file changes what the linter
+      # enforces and must trigger it.
+      - "scripts/repoConfig.json"
       - ".github/workflows/path-lint.yml"
 
 permissions:
