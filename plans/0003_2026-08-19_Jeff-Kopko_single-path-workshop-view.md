@@ -22,6 +22,11 @@ being the mechanism and becomes only the no-JavaScript fallback.
 - Spec: `plans/0003_2026-08-19_Jeff-Kopko_single-path-workshop-view.spec.md`
 - Predecessors: `plans/0001_…_workshop-deployment-path-lock.md` (tab sync via shared `groupid`),
   `plans/0002_…_path-badge-and-upstream.md` (locked-path banner, upstreamed)
+- **Blast radius of the gate: 65 repos, not ~12.** `gh api search/code -f q='org:FortinetCloudCSE
+  "public.ecr.aws/k4n6m5h8/fortinet-hugo" path:.github/workflows'` returns 65 distinct repos pulling
+  the floating `:latest` prod image tag (measured 2026-08-19). Plans 0001 and 0002 both say "~12";
+  that figure was wrong by 5x and is corrected here and in CentralRepo's `README.md`. It bounds the
+  *image* merge, not this plan's content changes.
 - **Blocking dependency:** CentralRepo PR
   [#71](https://github.com/FortinetCloudCSE/CentralRepo/pull/71) — draft, all 7 checks pass. It
   moves `pathtabs`/`pathtab` upstream and adds `site.Params.deploymentPaths`. This plan builds
@@ -57,9 +62,10 @@ Verified this session; each one killed or shaped an option.
 - **The publish path assumes a single site root.** `docker cp $CONT_ID:/home/CentralRepo/public`
   → `docs/` → `upload-pages-artifact path: './docs'` (`ai-101/.github/workflows/static.yml:100-132`),
   one Pages deployment per repo.
-- **`baseURL` is entangled with identity.** `hugo.jinja:4` derives it solely from `repoName`, which
-  is *also* the analytics workshop ID (`hugo.jinja:103`) and the quiz-score key (`hugo.jinja:102`).
-  Varying the URL prefix per path is not a local change.
+- **`baseURL` derives from `repoName` (`hugo.jinja:4`), which is also the analytics workshop ID and
+  quiz-score key (`hugo.jinja:102-103`).** This matters only if a variant changes `baseURL` itself.
+  A path carried as a *subdirectory* under the existing `baseURL` (`/ai-101/k8s/01Intro/`) leaves
+  `repoName`, analytics and quiz reporting untouched. Corrected from an earlier overstatement.
 - **Hugo compute is not the constraint.** 639 ms for `ai-101`'s 42 pages, inside a 40–60 s pipeline
   dominated by image pull (~14 s) and Pages deploy (~22 s). Any cost argument against a second pass
   is about plumbing and URLs, not time.
@@ -121,15 +127,21 @@ now, on plumbing rather than on principle:
 
 - Two passes need `hugo_build.sh` + `local_copy.sh` changes, and `--cleanDestinationDir` deletes the
   previous pass. That part is merely work.
-- The blocker is the tail: one `docker cp` of one `public/`, one Pages deployment per repo, and a
-  `baseURL` derived from `repoName` which doubles as the analytics ID and quiz key. Serving two trees
-  means adding a URL segment to every page in the estate and rewriting every cross-link, or
-  standing up a second Pages target that GitHub does not offer per repo.
-- It does not actually simplify "change your choice" — switching becomes "navigate to the mirrored
-  URL", which needs a page-to-page mapping anyway, i.e. the same bookkeeping as the runtime gate plus
-  a redirect.
-- Compute is not the objection: 639 ms per pass. Recorded so nobody later rejects it for the wrong
-  reason.
+- The real cost is a URL change in every opted-in repo — today that is **`ai-101` alone**, ~14 page
+  URLs gaining one segment. Corrected from an earlier claim of "every published URL across ~12
+  repos": the 65 repos share the *image*, not the URL scheme, and a repo that never sets
+  `deploymentPaths` builds a single tree at its current URLs. What actually breaks is narrower than
+  stated but still real — existing deep links into `ai-101` (slide decks, QR codes, chat history),
+  cross-repo links, and the handout PDFs' internal links.
+- Compute is not the objection: 639 ms per pass, in a 40-60 s pipeline.
+- Genuine advantages this option has and the runtime gate does not: search scoping and print/PDF
+  single-path output come free, and it works with JavaScript disabled.
+- Genuine remaining cost: "change your choice" needs a current-URL → sibling-URL mapping, and the
+  publish tail (`--cleanDestinationDir`, one `docker cp`, one Pages artifact) needs reworking.
+
+**Net: this option is stronger than plan text originally implied.** It is still not the
+recommendation, because it hinges entirely on the URL question below being answered "yes" — but the
+deciding factor is that question, not cost.
 
 Revisit only if the URL question below is answered "yes, the path belongs in the URL".
 
@@ -316,7 +328,11 @@ clears. Do not start P1 before P0.
 
 ## Plan Changes
 
-- (none)
+- 2026-08-19, still `Proposed`: two factual corrections after measuring rather than recalling.
+  (1) The shared-image blast radius is **65 repos**, not "~12" as plans 0001-0002 said. (2) The
+  build-time-variant option's cost was overstated — a path carried as a URL *subdirectory* does not
+  touch `baseURL`, `repoName`, analytics or quiz keys, and only opted-in repos (today: `ai-101`
+  alone) see any URL change. The rejection now rests on the open URL question, not on cost.
 
 ## Files Changed
 
