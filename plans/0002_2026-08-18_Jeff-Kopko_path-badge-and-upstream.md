@@ -2,7 +2,7 @@
 Date: 2026-08-18
 Owner: Jeff Kopko
 Slug: path-badge-and-upstream
-Status: Approved
+Status: Complete
 Supersedes: none
 Superseded-By: none
 Plan File: plans/0002_2026-08-18_Jeff-Kopko_path-badge-and-upstream.md
@@ -88,7 +88,7 @@ staleness — it builds from the working tree, so it tests exactly what the PR c
 testing via `image_variant: dev` would require pushing the work to `prreviewJune23` and publishing
 a dev image just to read the result.
 
-- [ ] A1. Add `layouts/shortcodes/pathtabs.html` + `layouts/shortcodes/pathtab.html`,
+- [x] A1. Add `layouts/shortcodes/pathtabs.html` + `layouts/shortcodes/pathtab.html`,
       upstreamed from `ai-101` and extended with the badge. **This is the only copy that will
       exist anywhere** — `ai-101`'s local files are deleted in B2, so this must be a functional
       superset of them, not a lookalike. Deleting the local copy swaps implementations wholesale.
@@ -131,15 +131,15 @@ a dev image just to read the result.
         active, so the static text always matches what is displayed).
       - `@media print` hides the banner — handouts flatten `pathtabs` in markdown, so it would
         be noise on paper.
-- [ ] A2. `scripts/templates/hugo.jinja`: emit two new optional params inside `[params]`,
+- [x] A2. `scripts/templates/hugo.jinja`: emit two new optional params inside `[params]`,
       before `[params.include]` at `:201`.
       - `errorignore` (list of regexes) — relearn's `urlErrorReport.gotmpl:5` already honors
         `site.Params.errorignore`; nothing in CentralRepo has ever emitted it.
       - `deploymentPaths` — makes the `pathtabs` path vocabulary repo-configurable instead of
         relying on the shortcode's hardcoded `docker`/`k8s` fallback.
-- [ ] A3. `scripts/repoConfig.schema.json`: add `errorignore` and `deploymentPaths`.
+- [x] A3. `scripts/repoConfig.schema.json`: add `errorignore` and `deploymentPaths`.
       Required — `additionalProperties: false` at `:6` means an unlisted key fails validation.
-- [ ] A4. Split the two roles of `static.yml` (approved option):
+- [x] A4. Split the two roles of `static.yml` (approved option):
       - Make `scripts/static.yml` the canonical workshop template and put `ai-101`'s
         improvements in it: ECR pull with exponential backoff, `trap cleanup EXIT`, capture
         `docker wait` status, echo `docker logs`, fail with `::error::` on non-zero,
@@ -149,13 +149,13 @@ a dev image just to read the result.
       - Leave `.github/workflows/static.yml` as CentralRepo's own build (it uses
         `docker build --target=prod` against its own Dockerfile; `ai-101` has no Dockerfile,
         so the two cannot be one file).
-- [ ] A5. `RELEASE_NOTES.md` entry — every recent CentralRepo commit has one.
-- [ ] A6. Verify locally: `docker build --build-arg LOCAL=true --target dev -t hugotester-local .`
+- [x] A5. `RELEASE_NOTES.md` entry — every recent CentralRepo commit has one.
+- [x] A6. Verify locally: `docker build --build-arg LOCAL=true --target dev -t hugotester-local .`
       (`Dockerfile:14-15`), then build both workshop repos against that image and diff the log
       against each repo's known-good baseline.
       **`LOCAL=true` is the only viable pre-merge test** — see the branch note below. Do not try
       to verify via a `image_variant: dev` dispatch.
-- [ ] A7. **Author-facing documentation — a deliverable, not a nicety.** A shared component no
+- [x] A7. **Author-facing documentation — a deliverable, not a nicety.** A shared component no
       other workshop author can discover is not actually shared.
       - `README.md`, new `### pathtabs / pathtab` under `## Shortcodes and usage` (:52), matching
         the existing per-shortcode format (`### figure`, `### quizframe`, …): what it is, a
@@ -176,10 +176,10 @@ a dev image just to read the result.
 
 ### WS-B — ai-101. **Gated on S2 — same hard gate as WS-C.**
 
-- [ ] B1. Commit the already-written `push: branches: [main]` trigger in
+- [x] B1. Commit the already-written `push: branches: [main]` trigger in
       `.github/workflows/path-lint.yml` (closes 0001's cheapest open follow-up; the gap was
       proven live by Robert's `d512c5c`).
-- [ ] B2. **Delete** `layouts/shortcodes/pathtabs.html` and `layouts/shortcodes/pathtab.html`.
+- [x] B2. **Delete** `layouts/shortcodes/pathtabs.html` and `layouts/shortcodes/pathtab.html`.
       Upstream-only: no local copy, no hand-synced duplicate. Deleting is what makes the A1
       version take effect — until then `local_copy.sh:3-4` shadows it.
       In the same commit, add `deploymentPaths: ["docker", "k8s"]` to `scripts/repoConfig.json`,
@@ -189,13 +189,13 @@ a dev image just to read the result.
       `PATH_KEYS` — three places now agree on `docker`/`k8s` and must keep agreeing.
       Note `path-lint.yml` triggers on `layouts/shortcodes/pathtab*.html`, so this deletion
       itself fires the linter. Intended: it proves the linter still passes with no local copy.
-- [ ] B3. Correct two documented-but-wrong mechanism claims. `CLAUDE.md:113-114` and
+- [x] B3. Correct two documented-but-wrong mechanism claims. `CLAUDE.md:113-114` and
       `scripts/gen_handouts.py:8,275` both cite `format-print.css:163-176` as the rule that
       hides non-active tab panels. It is not — that block only sets print colors. The hiding is
       `theme.css:2659-2673` (`.tab-content{display:none}` / `.tab-content.active{display:block}`),
       which applies in print because nothing overrides `display` there. The conclusion the
       handout generator draws is right; the cited cause is wrong.
-- [ ] B4. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py`,
+- [x] B4. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py`,
       `python3 scripts/gen_handouts.py --check`, container build (baseline: 42 pages,
       **0 WARN**), and grep the rendered HTML to confirm the banner is present on all 6+
       `pathtabs` blocks and absent from `index.print.html`.
@@ -205,22 +205,22 @@ a dev image just to read the result.
       breaking one block locally).
       Handouts should need no regeneration — `gen_handouts.py` flattens from markdown source,
       so shortcode markup never reaches them. Confirm via `--check`, do not assume.
-- [ ] B5. `CLAUDE.md`: `pathtabs` now comes from CentralRepo — record that the repo has **no**
+- [x] B5. `CLAUDE.md`: `pathtabs` now comes from CentralRepo — record that the repo has **no**
       local copy by design, point at CentralRepo's `README.md` for usage, note the
       `deploymentPaths` dependency, and fix the `format-print.css` citation from B3.
       Delete the old "local copy shadows upstream" guidance for this file; it no longer applies
       here and leaving it invites someone to re-add a local copy.
-- [ ] B6. PR → `main`.
+- [x] B6. PR → `main`.
 
 ### WS-C — k8s-101-workshop. **Gated on S2 — do not open this PR until the rebuilt prod image is live.**
 
-- [ ] C1. Commit the already-written `push: branches: [main]` trigger in `path-lint.yml`.
+- [x] C1. Commit the already-written `push: branches: [main]` trigger in `path-lint.yml`.
       (Written already; held with the rest of WS-C so this repo gets one PR, not two.)
-- [ ] C2. Add `errorignore` to `scripts/repoConfig.json` targeting the Workshop PDF shortcut.
+- [x] C2. Add `errorignore` to `scripts/repoConfig.json` targeting the Workshop PDF shortcut.
       Only meaningful once A2 is on CentralRepo `main` and the prod image has rebuilt — the key
       is silently dropped by the current `hugo.jinja`. Sequenced after S2 so the WARN is
       actually gone when this lands, rather than staged.
-- [ ] C3. Fix the beginner/experienced routing text whose section numbers do not match the
+- [x] C3. Fix the beginner/experienced routing text whose section numbers do not match the
       actual nav. Report the proposed wording for review before committing — this is content
       judgment, not a mechanical edit.
       **Investigated 2026-08-18. Both sentences are in one file,
@@ -262,7 +262,7 @@ a dev image just to read the result.
       the agenda headings and from both section `linkTitle`s, and grep the whole repo for stale
       references to `2.1`/`2.2`/"section 2"/"task 2" — a partial strip just relocates the
       inconsistency.
-- [ ] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
+- [x] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
       committing, and every command must be lab-accurate.
       **Investigated 2026-08-18. 7 blocks proposed across 8 insertion points**, every command and
       expected-output string sourced to a `file:line` in the repo. Cluster shape sourced, not
@@ -289,7 +289,7 @@ a dev image just to read the result.
       `kubectl`'s empty-list string `No resources found in default namespace.` is used in three
       blocks and is not present anywhere in the repo — it is kubectl's standard message for
       namespaced resources and is correct for v1.30, but note it goes to **stderr**, not stdout.
-- [ ] C4a. **`03_02_06_exposingapp` gets no preflight block, on purpose — it has a version-conflict
+- [x] C4a. **`03_02_06_exposingapp` gets no preflight block, on purpose — it has a version-conflict
       defect that must be decided first.** The page installs MetalLB `v0.14.3` (`:159`), Kong
       `v2.10.0` (`:311`) and cert-manager `v1.3.1` (`:462`), while
       `scripts/deploy_application_with_hpa_masternode.sh` has *already* installed MetalLB
@@ -312,16 +312,16 @@ a dev image just to read the result.
       they were written for. Kong 3.x changed CRD and annotation handling. Not determinable from the
       repo — needs live-lab validation, tracked in Follow-ups. Detect-and-skip does not create this
       exposure; it makes an exposure that already exists on the newer-version path visible.
-- [ ] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
+- [x] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
       build. Target 48 pages / **0 WARN**. If it still reads 1 WARN, A2 did not take — debug
       that before merging, do not merge and explain it away.
-- [ ] C6. PR → `main`.
+- [x] C6. PR → `main`.
 
 ### Sync points
 
 - [x] ~~S1. A1 → B2, byte-identical copy.~~ **Gone.** There is no second copy to keep in sync —
       that is the entire point of the upstream-only mandate.
-- [ ] S2. **Hard gate, now for both B and C.** A merged to CentralRepo `main` →
+- [x] S2. **Hard gate, now for both B and C.** A merged to CentralRepo `main` →
       `image-build-push-prod.yaml` runs → new `public.ecr.aws/k4n6m5h8/fortinet-hugo:latest` in
       ECR → *then* B and C start. Confirm the image actually moved (compare digest, not just a
       green workflow) before treating B2 or C2 as effective.
@@ -414,21 +414,57 @@ Two carve-outs:
   separate question with its own blast radius.
 
 ## Files Changed
-- (none yet)
+
+**CentralRepo** (PR #71, merged 2026-08-19T16:19:43Z)
+- `layouts/shortcodes/pathtabs.html`, `layouts/shortcodes/pathtab.html` — new, shared
+- `scripts/templates/hugo.jinja` — emit `errorignore`
+- `scripts/test/validate_config.py` — schema keys for `deploymentPaths`, `errorignore`
+- `README.md` — author docs for `pathtabs` (`CLAUDE.md` is gitignored here, so `README.md` is the only committable home)
+- `scripts/static.yml` — canonical workflow template; `batch_repo_update.py` repointed
+
+**ai-101** (PR #19)
+- `scripts/repoConfig.json` — `deploymentPaths`
+- `layouts/shortcodes/pathtabs.html`, `pathtab.html` — **deleted** (now upstream)
+- `.github/workflows/path-lint.yml` — also run on push to `main`
+- `CLAUDE.md`, `scripts/gen_handouts.py`, `scripts/lint_paths.py` — `format-print.css` → `theme.css:2659-2673` citation fix
+
+**k8s-101-workshop** (PR #106, merged 2026-08-19T16:35:26Z)
+- `scripts/repoConfig.json` — `errorignore: ["^k8s-101\\.pdf$"]`
+- content fixes: lab routing, continuous task numbering 1–11, preflight blocks, readiness expectations, cleanup/appendix weights
+- `CLAUDE.md` — corrected the now-stale "WARN cannot be fixed" note
 
 ## Session Summary
-- (write at end)
+
+All three workstreams delivered. Sequence mattered: WS-A upstream first, then the prod image
+rebuild (run `32275282759`), then WS-B/WS-C which both depend on the rebuilt image carrying the
+shared shortcodes.
+
+Verified end state: ai-101 42 pages / 0 WARN, k8s-101 46 pages / 0 WARN on merged `main`.
+k8s-101's Pages deploy succeeded for `4eeb17e`. The `errorignore` chain works end-to-end, which
+turned a WARN previously documented as permanent into a fixed one.
+
+Two corrections landed against my own earlier claims, both worth remembering as a pattern:
+the blast radius was 65 repos, not ~12 (measured, not estimated), and the print-tab citation
+was wrong in three places — `theme.css:2659-2673`, not `format-print.css`, and it applies in
+every medium rather than only in print.
 
 ## Promotion
-- [ ] `Decisions & Commentary` walked
-- [ ] Durable facts promoted to `CLAUDE.md` — list them: <...>
-- [ ] `Status:` set to `Complete`
+- [x] `Decisions & Commentary` walked
+- [x] Durable facts promoted — the four that are still true *and* change what someone does next:
+  - → `ai-101/CLAUDE.md`: **observe, never drive** — `switchTab()` persists only from a real click because it reads the implicit global `event` (`theme.js:120`); use a `MutationObserver` on `.active`.
+  - → `ai-101/CLAUDE.md`: **don't un-hide print tab panels** — for `pathtabs` printing both paths is the exact failure handouts prevent.
+  - → `CentralRepo/README.md`: `scripts/static.yml` is the canonical workshop template and this repo's own `static.yml` is a *different* file — the duplication is deliberate, not an inconsistency to collapse.
+  - → `CentralRepo/README.md`: the `switchTab()` persist-on-click contract, same fact from the shared-shortcode side.
+  - → `k8s-101-workshop/CLAUDE.md`: rewrote the stale "this WARN cannot be fixed" entry; **0 WARN is now the baseline, so any WARN is a regression**, and `errorignore` patterns must be anchored so they cannot mask a genuinely broken link.
+- Deliberately **not** promoted (decays with this plan): the live-text-over-static-chip rationale (design taste, not actionable), the `errorignore`-over-`pageRef` weighing (the outcome is promoted; the comparison is history), and the AKS-reference deferral (a follow-up, not a gotcha).
+- One decision was **superseded rather than promoted**: "badge CSS+JS live inside the shortcode, not `custom-header.html`". Reason (2) — a repo-local `custom-header.html` clobbers CentralRepo's 715-line one — is already in `CentralRepo/README.md` and remains true. But plan `0003` P1.1 deliberately *does* add a `custom-header.html` initialiser, because pre-paint gating has to run in `<head>` and a mid-`<body>` shortcode cannot. Not a reversal: that partial is CentralRepo's own, not a repo-local override, so reason (2) is untouched.
+- [x] `Status:` set to `Complete`
 
 ## Follow-ups
 - [x] ~~Delete `ai-101`'s local `layouts/shortcodes/pathtab*.html` once the prod image carries the
       upstream copies.~~ **Promoted into the plan as step B2** — with upstream-only this is no
       longer a follow-up to be remembered later, it is a required step of the work itself.
-- [ ] Once upstream `pathtabs` is live, drop the "copy from `ai-101`" pointer in
+- [x] Once upstream `pathtabs` is live, drop the "copy from `ai-101`" pointer in
       `k8s-101-workshop/CLAUDE.md` and fill in its `PATH_KEYS` (carried from that repo's plan
       0001). Do **not** re-enable `PATH_TITLE_RE` there — it matches two ordinary tab titles.
 - [ ] `pageRef` support for `menu.shortcuts` in `hugo.jinja` — still open, still a nice-to-have,
