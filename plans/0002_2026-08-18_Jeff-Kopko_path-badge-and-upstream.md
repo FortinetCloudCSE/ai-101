@@ -258,6 +258,10 @@ a dev image just to read the result.
       `linkTitle`s, which changes student-visible sidebar labels — wider than "routing text".
       Recommend bundling it, since leaving it guarantees a repeat; default is to leave it and
       log a follow-up.
+      **Decided 2026-08-19: bundled in, per Jeff's "fix all the findings".** Strip the numbers from
+      the agenda headings and from both section `linkTitle`s, and grep the whole repo for stale
+      references to `2.1`/`2.2`/"section 2"/"task 2" — a partial strip just relocates the
+      inconsistency.
 - [ ] C4. Add preflight verify blocks to the hands-on pages. Same rule: propose before
       committing, and every command must be lab-accurate.
       **Investigated 2026-08-18. 7 blocks proposed across 8 insertion points**, every command and
@@ -294,6 +298,20 @@ a dev image just to read the result.
       `kubectl get ipaddresspool -n metallb-system` at `:196`) but the *remedy* — skip the steps,
       or run Task 2's "Cleanup Addons" and downgrade — is a content decision not derivable from
       the repo. Decide, then add the block. Do not guess.
+      **Resolved 2026-08-19, approved by Jeff: conditional detect-and-skip. Never downgrade.**
+      The block detects what is already installed and branches:
+      - addons present → skip this page's install steps, continue from the configuration steps;
+      - addons absent (Task 2's "Cleanup Addons", `03_01_03_HPA_demo/index.md:212-221`, removed
+        them) → run the install steps as written.
+      Downgrade was rejected: installing `v0.14.3` over `v0.15.2` is unambiguously wrong, and a
+      teardown-and-downgrade cycle risks CRD residue for the sake of matching prose. Making the
+      page unconditional in the *other* direction (always cleanup-then-install) was also rejected —
+      it destroys the working Task 2 environment to satisfy a documentation mismatch.
+      **Known-unknown, deliberately not fixed here:** whether this page's *downstream* configuration
+      steps work against Kong `3.5.0` / cert-manager `1.18.2` rather than the `2.10.0` / `1.3.1`
+      they were written for. Kong 3.x changed CRD and annotation handling. Not determinable from the
+      repo — needs live-lab validation, tracked in Follow-ups. Detect-and-skip does not create this
+      exposure; it makes an exposure that already exists on the newer-version path visible.
 - [ ] C5. Verify against the **rebuilt** image: `python3 scripts/lint_paths.py` + container
       build. Target 48 pages / **0 WARN**. If it still reads 1 WARN, A2 did not take — debug
       that before merging, do not merge and explain it away.
@@ -424,8 +442,9 @@ Two carve-outs:
       scope here — flagged because it makes CentralRepo's dev image untrustworthy as a test
       target for anything main-bound.
 - [ ] `k8s-101-workshop`: dead AKS references — still deferred by decision.
-- [ ] `k8s-101-workshop` content bugs found while investigating C3/C4, all pre-existing, all out of
-      scope here. Each is independently checkable and none blocks this plan:
+- [ ] `k8s-101-workshop` content bugs found while investigating C3/C4, all pre-existing.
+      **Pulled into scope 2026-08-19 on Jeff's "fix all the findings" — see WS-C.** They stay listed
+      here because two of them cannot be *resolved* from the repo, only made honest:
       - `03_01_03_HPA_demo/index.md:129-138` — the "helm version" readiness tab expects helm
         `v4.1` and `KubeClientVersion:"v1.35"`, against a `v1.30` cluster. Nothing in `scripts/`
         or `content/` installs helm at all, so either the tab is stale or helm arrives from
@@ -445,6 +464,16 @@ Two carve-outs:
       - The agenda headings in `02_quickstart_overview_faq/_index.md` number `2.1/2.2/2.3` as
         *tasks inside* `03_01_k8sinstall`, colliding with the sidebar where `2.1` is that whole
         section and `2.2` is `03_02_k8sindepth`. Same bug class as C3 and will re-break it.
+        **Now bundled into C3.**
+      - `03_02_k8sindepth/`: `Appendix - More info` is `weight: 7` and `Task 7 - Cleanup` is
+        `weight: 8`, so the appendix sorts ahead of the final cleanup task.
+- [ ] **Live-lab validation: does `03_02_06_exposingapp`'s configuration sequence work against Kong
+      `3.5.0` and cert-manager `1.18.2`?** The page's steps were written for `2.10.0` / `1.3.1`, and
+      Kong 3.x changed CRD and annotation handling. C4a's detect-and-skip block routes students onto
+      the newer versions rather than downgrading, so this is now the load-bearing unknown on that
+      page. Not answerable from the repo — someone has to run it. Until then the page is no *more*
+      broken than it is today for anyone who completed Task 2, but the failure mode moves from
+      "silently downgrades" to "steps may not match the installed CRDs".
 - [ ] Reconsider AKS as an `ai-101` path once someone can validate it on a real cluster.
 
 ## Risks / Open Questions

@@ -116,6 +116,55 @@ two Plan Changes entries — first the sequencing call, then the upstream-only m
   produces.
 - Also: CentralRepo is already in `python.code-workspace:4`, so no workspace change needed.
 
+### C4a resolved — detect-and-skip, and why downgrade was never really a candidate
+- What I'm doing: closing the one C4 decision I refused to guess at, now that Jeff has approved it.
+- Notes: the page installs MetalLB `v0.14.3` / Kong `v2.10.0` / cert-manager `v1.3.1` over the
+  `v0.15.2` / `v3.5.0` / `v1.18.2` an earlier task already installed. I had framed this as a genuine
+  two-way choice in the plan. It is not, and the framing was too generous to the downgrade option:
+  `helm install` of an older chart over a newer release either fails or rolls CRDs backwards, and
+  neither outcome is something a workshop should walk a student into. The only real question was
+  whether to make the page *unconditionally* cleanup-then-install (destroying a working Task 2
+  environment to match the prose) or to branch on what is present. Branching wins.
+- Decision: preflight detects, then either skips the installs or runs them. The branch is necessary,
+  not defensive — Task 2's "Cleanup Addons" step genuinely produces the absent state.
+- Notes: the honest cost is that detect-and-skip **exposes** rather than fixes a second problem. If
+  a student keeps Kong `3.5.0`, the page's downstream configuration steps were written for `2.10.0`,
+  and Kong 3.x moved CRDs and annotations. I cannot settle that from the repo, and I declined to
+  rewrite the config steps on a guess about 3.x semantics — that would be exactly the "fluent but
+  wrong lab commands" risk this plan already flagged. Logged as a live-lab follow-up and called out
+  in the WS-C prompt so the session reports it rather than silently papering over it.
+- Lesson learned: when a plan says "decide, then act", check whether the two options are actually
+  comparable before presenting them as a choice. One of these was never viable, and writing it down
+  as a balanced pair cost a round-trip.
+
+### WS-C launched, with the numbering fix bundled
+- What I'm doing: running WS-C's content half now, in its own worktree, concurrently with WS-A.
+- Why: neither C3, C4/C4a nor the five content bugs depend on the image rebuild — only C2 (the
+  `errorignore` key), C5 (0-WARN verification) and C6 (the PR) sit behind S2. Holding the prose work
+  behind the gate would have serialized it for no reason. The prompt explicitly scopes C2/C5/C6 out
+  and forbids pushing.
+- Decision: bundle the `2.1/2.2/2.3` numbering collision into C3 rather than leave it as a
+  follow-up. The plan's default was to defer it; "fix all the findings" overrides that, and the
+  reasoning for bundling was already the stronger side — stripping numbers from the agenda while
+  leaving them in the sidebar `linkTitle`s reproduces the same class of mismatch C3 exists to fix.
+- Notes: two bugs are *not* resolvable from the repo, only made honest — the helm-version tab (a
+  version nothing in the repo installs) and the NodePort NSG dependency (defined outside this repo).
+  The prompt tells the session to stop asserting unverifiable specifics rather than invent plausible
+  ones. Fabricating a helm version here would be the single easiest way to make this worse.
+- Notes: serialization constraints handed to the session explicitly, because a naive fan-out would
+  corrupt them — C4's `03_01_03_HPA_demo` block and content bugs 1–2 all edit that one file, and
+  C3's number grep spans the repo.
+
+### Gotcha — `info/exclude` lives in the *common* git dir, not the worktree's
+- Notes: I wrote `.plan-ref/` to `$(git rev-parse --git-dir)/info/exclude` inside the worktree and
+  `git status` kept showing it untracked. Worktrees have their own git dir but read
+  `info/exclude` from `--git-common-dir` (the primary checkout's `.git`). Fixed by writing there
+  instead. Safe for a shared checkout — it is local metadata, not a working-tree file, so no
+  concurrent session's `git add -A` can pick it up.
+- Lesson learned: for anything per-worktree-looking under `.git`, check `--git-common-dir` vs
+  `--git-dir` before assuming the write landed where it is read from. A silent no-op is the failure
+  mode, which is why it cost two rounds to notice.
+
 ## Commands (high-level)
 - `git log/status/rev-list` across `ai-101`, `k8s-101-workshop`, `CentralRepo` — confirm 0001's
   end state and how far the local CentralRepo branch has drifted
