@@ -9,3 +9,6 @@ package.json
 fortihugorunner
 .claude
 .vscode
+# lint_paths.py imports gen_handouts.py as a sibling module, so running the
+# linter writes bytecode here.
+scripts/__pycache__/
