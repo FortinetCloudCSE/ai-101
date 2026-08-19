@@ -2,13 +2,13 @@
 """Generate one linear, single-path handout page per deployment path.
 
 The lab pages are the single source of truth. This script walks ``content/`` in
-site order and, for each deployment path, emits one page with every ``pathtabs``
-block flattened down to that path's body. The other path is dropped entirely --
-not collapsed behind a tab -- because only the *active* tab is ever rendered, in any
-medium: ``theme.css:2659-2673`` sets ``#R-body .tab-content { display: none }`` with
-``.tab-content.active { display: block }``. So a tabbed page silently omits the other
-path. Not a print-only rule -- ``format-print.css:163-176`` merely recolours tabs for
-paper and hides nothing.
+site order and, for each deployment path, emits one page with every ``pathtabs`` and
+``pathonly`` block flattened down to that path's body. The other path is dropped
+entirely -- not collapsed behind a tab -- because only the *active* tab is ever
+rendered, in any medium: ``theme.css:2659-2673`` sets ``#R-body .tab-content
+{ display: none }`` with ``.tab-content.active { display: block }``. So a tabbed page
+silently omits the other path. Not a print-only rule -- ``format-print.css:163-176``
+merely recolours tabs for paper and hides nothing.
 
 For the same reason, the *non*-path tab groups (the command-vs-"Expected Output"
 axis) are flattened as well, into labelled subsections. Leaving them as tabs cost
@@ -16,8 +16,9 @@ axis) are flattened as well, into labelled subsections. Leaving them as tabs cos
 
 Usage
 -----
-    python3 scripts/gen_handouts.py            # write the handout pages
-    python3 scripts/gen_handouts.py --check    # exit 1 if regenerating would change anything
+    python3 scripts/gen_handouts.py               # write the handout pages
+    python3 scripts/gen_handouts.py --check       # exit 1 if regenerating would change anything
+    python3 scripts/gen_handouts.py --list-slugs  # one handout slug per line, no writes
 
 Run from the repo root (or anywhere -- paths are resolved relative to this file).
 """
@@ -25,6 +26,7 @@ Run from the repo root (or anywhere -- paths are resolved relative to this file)
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -36,28 +38,64 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONTENT = REPO_ROOT / "content"
 OUT_DIR = CONTENT / "09Reference" / "handouts"
+REPO_CONFIG = REPO_ROOT / "scripts" / "repoConfig.json"
 
 GENERATOR = "scripts/gen_handouts.py"
 
-# Deployment paths. The ``pathtab`` shortcode now lives in CentralRepo and reads its
-# vocabulary from the ``deploymentPaths`` site param, so these keys and titles must
-# match ``deploymentPaths`` in scripts/repoConfig.json and PATH_KEYS in
-# scripts/lint_paths.py. Titles matter as much as keys: relearn keys each reader's
-# stored tab selection on ``anchorize(title)``.
-PATHS = [
-    {
-        "key": "docker",
-        "title": "Docker Compose",
-        "slug": "handout-docker",
-        "weight": 20,
-    },
-    {
-        "key": "k8s",
-        "title": "Kubernetes / Helm",
-        "slug": "handout-k8s",
-        "weight": 30,
-    },
-]
+
+def load_paths() -> list[dict]:
+    """Read the deployment-path vocabulary from scripts/repoConfig.json.
+
+    That file is authoritative because it is the one Hugo reads at build time: it
+    becomes the ``deploymentPaths`` site param, which is where CentralRepo's
+    ``pathtab``/``pathonly`` shortcodes get the keys they accept. Anything else naming
+    the paths -- this script, scripts/lint_paths.py (which imports from here), the PDF
+    workflow (which asks via ``--list-slugs``) -- is downstream of it, so adding a third
+    path means editing one file rather than four that can silently disagree.
+
+    ``slug`` and ``weight`` stay local. They order and name the generated pages, which
+    is this generator's business and not site vocabulary; the site param carries no such
+    fields. ``title`` is taken verbatim -- the theme derives each reader's stored tab
+    selection from ``anchorize(title)``, so retitling or normalising a path silently
+    resets everyone's choice.
+
+    A missing or empty list is fatal rather than an empty run: with no paths this script
+    writes no handouts and ``--check`` then passes vacuously, which is the exact silent
+    failure this indirection is supposed to remove.
+    """
+    try:
+        config = json.loads(REPO_CONFIG.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise SystemExit(f"{REPO_CONFIG}: not found; it declares the deployment paths")
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"{REPO_CONFIG}: not valid JSON ({exc})")
+
+    entries = config.get("deploymentPaths")
+    if not entries:
+        raise SystemExit(
+            f"{REPO_CONFIG}: deploymentPaths is missing or empty; without it there is no "
+            "path vocabulary and the handouts would silently generate nothing"
+        )
+
+    paths = []
+    for i, entry in enumerate(entries):
+        key, title = entry.get("key"), entry.get("title")
+        if not key or not title:
+            raise SystemExit(
+                f"{REPO_CONFIG}: deploymentPaths[{i}] needs both 'key' and 'title'"
+            )
+        paths.append(
+            {
+                "key": key,
+                "title": title,
+                "slug": f"handout-{key}",
+                "weight": 20 + 10 * i,
+            }
+        )
+    return paths
+
+
+PATHS = load_paths()
 
 # A source page is included in the handouts when it either contains a pathtabs
 # block or declares a whole-page ``deploymentPath``. That is exactly the set of
@@ -89,14 +127,47 @@ STRIP_LINE_PATTERNS = [
 
 # --------------------------------------------------------------------------
 # Parsing helpers
+#
+# Every marker pattern in this file is also the linter's: scripts/lint_paths.py
+# imports them rather than keeping a second copy, so a shortcode's spelling is
+# declared exactly once. The two scripts disagreeing is not a hypothetical -- the
+# handout flatteners and the linter's tracker have to agree on what a marker *is*
+# or one of them silently ignores a block the other acts on.
 # --------------------------------------------------------------------------
 
 FRONT_MATTER_DELIM = "---"
 FENCE_RE = re.compile(r"^\s*(```+|~~~+)")
-PATHTABS_OPEN_RE = re.compile(r"^\s*\{\{<\s*pathtabs\b.*?>\}\}\s*$")
+
+# The delimiter each block shortcode is called with. Not a style choice, and not
+# uniform, so it is declared here once and every message that tells an author what to
+# write is generated from it by ``marker_form`` below.
+#
+# ``{{% %}}`` hands the shortcode's body back to the *page's* markdown pass;
+# ``{{< >}}`` makes the shortcode responsible for rendering its own body. For
+# ``pathonly`` that difference is load-bearing and was measured: rendering the body
+# via ``RenderString`` happens in a separate render context, so headings inside the
+# block never join the page's fragment set. ``content/09Reference/_index.md`` links
+# ``[Compose profiles](#compose-profiles)`` at a heading now inside a ``pathonly``
+# block; with ``{{< >}}`` the build warned ``heading ID "compose-profiles" not found``
+# and the link was dead. ``pathtabs`` is the opposite case -- it renders no body of its
+# own, only the wrapper around ``pathtab`` children.
+BLOCK_DELIMS = {"pathtabs": "<", "pathonly": "%", "tabs": "<"}
+
+# ``re.M`` so the same pattern serves both the line-by-line flatteners and the
+# whole-body scan in ``Page.has_path_blocks``.
+PATHTABS_OPEN_RE = re.compile(r"^\s*\{\{<\s*pathtabs\b.*?>\}\}\s*$", re.M)
 PATHTABS_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*pathtabs\s*>\}\}\s*$")
 PATHTAB_OPEN_RE = re.compile(r"^\s*\{\{%\s*pathtab\s+path=\"([^\"]+)\"\s*%\}\}\s*$")
 PATHTAB_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*pathtab\s*%\}\}\s*$")
+
+# ``pathonly`` -- path-specific prose and whole sections outside a tab group. Percent
+# form, like ``pathtab``, for the fragment-set reason in ``BLOCK_DELIMS``. The angle
+# form is the plausible mistake -- it is what ``pathtabs`` and ``tabs`` use -- so it is
+# a hard error here rather than an unmatched line that would flatten to nothing.
+PATHONLY_OPEN_RE = re.compile(r"^\s*\{\{%\s*pathonly\s+path=\"([^\"]+)\"\s*%\}\}\s*$", re.M)
+PATHONLY_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*pathonly\s*%\}\}\s*$")
+PATHONLY_WRONG_DELIM_RE = re.compile(r"^\s*\{\{<\s*/?\s*pathonly\b", re.M)
+
 HEADING_RE = re.compile(r"^(#{1,5})(\s+)(.*)$")
 
 # Plain (non-path) tab groups -- the command-vs-"Expected Output" axis. ``\b`` and
@@ -107,7 +178,31 @@ TABS_CLOSE_RE = re.compile(r"^\s*\{\{<\s*/\s*tabs\s*>\}\}\s*$")
 TAB_OPEN_RE = re.compile(r"^\s*\{\{%\s*tab\s+.*?title=\"([^\"]*)\".*?%\}\}\s*$")
 TAB_CLOSE_RE = re.compile(r"^\s*\{\{%\s*/\s*tab\s*%\}\}\s*$")
 
+# Any block marker, anywhere on a line, with its delimiter and name captured. The
+# flatteners above match one marker anchored to a whole line; the linter needs the
+# complementary shape -- every marker on a line, in order -- to track nesting without
+# the state leaks a per-line ``if/elif`` chain produced. Both live here so the two
+# scripts cannot drift on what counts as a marker. ``pathtabs`` precedes ``tabs`` in
+# the alternation so the shorter name never claims the longer one's marker; the inner
+# ``pathtab`` / ``tab`` markers are deliberately not matched, because tracking which
+# *block* the reader is in never requires knowing which tab.
+BLOCK_MARKER_RE = re.compile(
+    r"\{\{(?P<delim>[<%])\s*(?P<close>/\s*)?"
+    r"(?P<name>pathtabs|pathonly|tabs)\b(?P<args>[^}]*?)[%>]\}\}"
+)
+
 SIMPLE_FM_RE = re.compile(r"^(\w+)\s*:\s*(.*)$")
+
+
+def marker_form(name: str) -> str:
+    """How to write ``name``'s markers, e.g. ``{{% pathonly … %}}``.
+
+    Every "you wrote the wrong delimiter" message in either script is built from this,
+    so the correction can never contradict ``BLOCK_DELIMS``. That mattered on the first
+    cut of ``pathonly``: the decision on its delimiter reversed once, and hand-written
+    messages in two files then said opposite things.
+    """
+    return "{{% " + name + " ... %}}" if BLOCK_DELIMS[name] == "%" else "{{< " + name + " ... >}}"
 
 
 def split_front_matter(text: str) -> tuple[dict[str, str], str]:
@@ -166,15 +261,32 @@ class Page:
             return 0
 
     @property
-    def has_pathtabs(self) -> bool:
-        return bool(PATHTABS_OPEN_RE.search(self.body) or "{{< pathtabs" in self.body)
+    def has_path_blocks(self) -> bool:
+        """Does this page carry path-specific content in either block shape?
+
+        ``pathonly`` has to count. A page whose only path-specific content is a
+        ``pathonly`` block has no ``pathtabs`` block and no whole-page
+        ``deploymentPath``, so on the ``pathtabs``-only test it was relevant to neither
+        path and dropped out of *both* handouts -- the content would exist on the site
+        and appear on no printed sheet.
+
+        The malformed ``{{< pathonly >}}`` spelling counts as well, so that the page is
+        pulled in and ``flatten_pathonly`` gets to reject it. Left out, a page whose only
+        path content carried that one-character mistake dropped out of both handouts and
+        nothing said so -- the delimiter error hid behind the inclusion test.
+        """
+        return bool(
+            PATHTABS_OPEN_RE.search(self.body)
+            or PATHONLY_OPEN_RE.search(self.body)
+            or PATHONLY_WRONG_DELIM_RE.search(self.body)
+        )
 
     def relevant_to(self, path_key: str) -> bool:
         if self.rel_md in EXCLUDE_PAGES:
             return False
         if self.deployment_path and self.deployment_path != path_key:
             return False
-        return self.has_pathtabs or self.deployment_path is not None
+        return self.has_path_blocks or self.deployment_path is not None
 
 
 def collect_pages() -> list[Page]:
@@ -239,6 +351,13 @@ def flatten_pathtabs(body: str, path_key: str, source: str) -> str:
             out.append(line)
             continue
 
+        if PATHONLY_OPEN_RE.match(line) or PATHONLY_WRONG_DELIM_RE.match(line):
+            raise SystemExit(
+                f"{source}: pathonly inside a pathtabs block is either redundant (same "
+                "path) or dead content (the other path); move it out, or let the pathtab "
+                "body carry the text"
+            )
+
         m = PATHTAB_OPEN_RE.match(line)
         if m:
             key = m.group(1)
@@ -269,6 +388,64 @@ def flatten_pathtabs(body: str, path_key: str, source: str) -> str:
 
     if block is not None:
         raise SystemExit(f"{source}: unclosed pathtabs block")
+    return "\n".join(out)
+
+
+def flatten_pathonly(body: str, path_key: str, source: str) -> str:
+    """Inline every ``pathonly`` block belonging to ``path_key``; delete the others.
+
+    A sibling of ``flatten_pathtabs`` rather than a reuse of it. That function refuses a
+    block that does not name every key in ``PATHS``, which is right for a tab group -- a
+    missing tab is a reader left with no instructions at all -- and wrong here: a
+    ``pathonly`` block names exactly one path by design, and the other path's absence is
+    the whole point of the shortcode.
+
+    Every other failure is fatal rather than a warning, for the same reason the
+    shortcode itself uses ``errorf``: a mis-keyed block is either content shown to the
+    wrong reader or content shown to nobody, and both look like working output.
+    """
+    out: list[str] = []
+    keys = {p["key"] for p in PATHS}
+    # None = outside a block. Otherwise True (this path's block) or False (the other's).
+    keep: bool | None = None
+
+    for line, in_fence in iter_lines_with_fence_state(body.splitlines()):
+        if in_fence:
+            if keep is not False:
+                out.append(line)
+            continue
+
+        if PATHONLY_WRONG_DELIM_RE.match(line):
+            raise SystemExit(
+                f"{source}: write pathonly as {marker_form('pathonly')}, not the angle "
+                "form -- the angle form makes the shortcode render its own body in a "
+                "separate context, so headings inside the block never join the page's "
+                "fragment set and every in-page link to them is dead"
+            )
+
+        m = PATHONLY_OPEN_RE.match(line)
+        if m:
+            if keep is not None:
+                raise SystemExit(f"{source}: nested pathonly blocks are not supported")
+            key = m.group(1)
+            if key not in keys:
+                raise SystemExit(
+                    f"{source}: pathonly has unknown path {key!r}; expected one of "
+                    f"{sorted(keys)}"
+                )
+            keep = key == path_key
+            continue
+        if PATHONLY_CLOSE_RE.match(line):
+            if keep is None:
+                raise SystemExit(f"{source}: pathonly close marker with no open")
+            keep = None
+            continue
+
+        if keep is not False:
+            out.append(line)
+
+    if keep is not None:
+        raise SystemExit(f"{source}: unclosed pathonly block")
     return "\n".join(out)
 
 
@@ -452,7 +629,15 @@ def collapse_blank_runs(body: str) -> str:
 
 def render_page(page: Page, path_key: str, resources: dict[str, Path]) -> str:
     source = str(page.md_path.relative_to(REPO_ROOT))
+    # Order matters twice over. ``flatten_pathtabs`` runs first because it is the only
+    # pass that can still see -- and reject -- a ``pathonly`` block nested inside a
+    # ``pathtab`` body; once the other passes have run, that nesting is indistinguishable
+    # from a top-level block. ``flatten_pathonly`` then runs before
+    # ``flatten_plain_tabs`` so a ``pathonly`` block wrapping a command/output tab group
+    # is dropped whole, instead of the tab flattener first turning it into labelled
+    # subsections that the next pass has to delete again.
     body = flatten_pathtabs(page.body, path_key, source)
+    body = flatten_pathonly(body, path_key, source)
     body = flatten_plain_tabs(body, source)
     body = strip_site_only_paragraphs(body)
     body = rewrite_refs(body, page, resources)
@@ -552,7 +737,19 @@ def main() -> int:
         action="store_true",
         help="exit 1 if regenerating would change anything (CI freshness gate)",
     )
+    ap.add_argument(
+        "--list-slugs",
+        action="store_true",
+        help="print one handout slug per line and exit (for the PDF workflow's loop)",
+    )
     args = ap.parse_args()
+
+    # Answered before anything is read or written, so the PDF workflow can ask which
+    # handouts exist without depending on the content tree being buildable.
+    if args.list_slugs:
+        for path in PATHS:
+            print(path["slug"])
+        return 0
 
     wanted = targets()
     orphans = sorted(existing() - set(wanted))

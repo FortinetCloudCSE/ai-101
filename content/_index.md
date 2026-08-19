@@ -63,6 +63,7 @@ policies, and the detection story — using the same attack chain you ran in Lab
 
 See [Setup & Prerequisites](./01Intro) for the full list. Short version:
 
-- Docker Engine + Compose v2 (or Kubernetes + Helm 3 for the K8s path)
+- One of the two deployment paths — **Docker** with the Compose plugin (v2), or
+  **Kubernetes** with Helm 3 — chosen on the setup page linked above
 - Git and a terminal
 - ~8 GB RAM free; discrete GPU optional but speeds model loading significantly

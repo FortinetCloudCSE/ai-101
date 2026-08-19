@@ -122,7 +122,10 @@ jobs:
           "$CHROME" --version
 
           mkdir -p "$RUNNER_TEMP/pdf"
-          for slug in handout-docker handout-k8s; do
+          # Slug list comes from the generator, which derives it from
+          # deploymentPaths in scripts/repoConfig.json. Hardcoding it here meant a
+          # third path would build a site and silently ship two PDFs.
+          for slug in $(python3 scripts/gen_handouts.py --list-slugs); do
             url="http://127.0.0.1:$SERVE_PORT/$SITE_PREFIX/09reference/handouts/$slug/index.print.html"
             out="$RUNNER_TEMP/pdf/ai-101-$slug.pdf"
 

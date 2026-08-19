@@ -33,8 +33,7 @@ There is no Azure Cloud Shell page for this path — the UI runs on your own mac
 | [Day 2 swap](#day-2-swap--one-line-change) | Point the agent at FortiAIGate |
 | [Known issues](#known-issues-and-workarounds) | Including Web Preview `Unauthorized` |
 
-The **Compose profiles** table below does not apply to this path — the equivalent is
-the `values-labN.yaml` file per lab.
+Per-lab configuration lives in that lab's `values-labN.yaml` file.
 {{% /pathtab %}}
 {{< /pathtabs >}}
 
@@ -51,6 +50,7 @@ the `values-labN.yaml` file per lab.
 | `POISON_DESC` | `false` | Activates the poisoned `search_web` description for the Lab 4 advanced demo. Requires `ENABLE_EXTRA_TOOL=true`. |
 | `OLLAMA_MODEL` | `qwen2.5:3b` | Model pulled by the Ollama entrypoint at startup. |
 
+{{% pathonly path="docker" %}}
 ## Compose profiles
 
 | Profile | Services | Used in |
@@ -59,6 +59,7 @@ the `values-labN.yaml` file per lab.
 | `lab2` | ollama + agent (hardcoded) + ui | Lab 2 |
 | `lab3` | ollama + agent-mcp + mcp-server + ui-mcp | Lab 3 |
 | `lab4` | same as lab3 | Lab 4 |
+{{% /pathonly %}}
 
 ## API endpoints (agent)
 
