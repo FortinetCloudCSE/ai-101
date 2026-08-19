@@ -135,41 +135,6 @@ ALLOWLIST: list[dict] = [
         "why": "the gate page's own prose describing the two choices",
     },
     {
-        "file": "09Reference/_index.md",
-        "match": "The **Compose profiles** table below does not apply",
-        "why": "tells the k8s reader a section does not apply to them",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "There is no Azure Cloud Shell page for this path",
-        "why": "tells the Docker reader a page does not apply to them",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "the `values-labN.yaml` file per lab",
-        "why": "same, naming the k8s equivalent of Compose profiles",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "| `lab1` | ollama | Lab 1 |",
-        "why": "the Compose profiles reference table, already labelled Docker-only",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "| `lab2` |",
-        "why": "same table",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "| `lab3` |",
-        "why": "same table",
-    },
-    {
-        "file": "09Reference/_index.md",
-        "match": "| `lab4` |",
-        "why": "same table",
-    },
-    {
         "file": None,
         "match": "http://<ollama-host>:11434/v1",
         "why": "placeholder host in the OpenAI-compatible endpoint comparison",
