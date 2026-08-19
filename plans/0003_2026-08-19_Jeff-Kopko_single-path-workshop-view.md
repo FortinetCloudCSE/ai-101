@@ -463,6 +463,42 @@ clears. Do not start P1 before P0.
      `.Content` and appear once per page rather than once per block — 911 → 913, description clean.
 - 2026-08-19: the P2.2 → P1.2 reference in the specificity risk is a typo for P1.2. Measuring happened
   in P1.2 as intended; no `!important` was needed, so the risk is closed either way.
+- 2026-08-19, `Approved`, before Phase 2/3/4 implementation. Five corrections, all from reading the
+  code rather than the previous plan. Steps are not rewritten in place; the corrected intent is here.
+  1. **P4.4's stated defect is refuted.** The step says `lint_paths.py:254-261` "mis-tracks a
+     `pathtabs` block nested in a plain `tabs` group". It does not: `in_pathtabs` and `in_plain_tabs`
+     are independent, the `pathtabs` branches are tested first, and `TABS_OPEN_RE`
+     (`\{\{<\s*tabs\b`) cannot match `{{< pathtabs` — the literal `{{<` plus optional whitespace is
+     followed by `pathtabs`, so `tabs` never sits at the required position. Verified by reading the
+     regexes at `:145-148` and the chain at `:255-262`. Three *different* real bugs are there
+     instead, and P4.4 now means these:
+     (a) `PATHTABS_OPEN_RE` and `TABS_OPEN_RE` are **unanchored**, so a prose mention of
+     `{{< pathtabs >}}` outside a fenced block flips the state machine on and every path token for
+     the rest of the file is treated as being inside a block. The fence skip does not save this —
+     inline-code prose is not a fence.
+     (b) the chain is `if/elif`, so a line carrying both a close and the next open (or a complete
+     single-line group) registers only the first transition, and the state leaks to end of file.
+     (c) the two trackers are booleans, not counters, so the first close ends a nested group.
+  2. **P2.5's three targets are five, and two of them must be reworded rather than gated.**
+     `content/04MCP/_index.md:91` is mid-sentence inside a `{{% notice %}}`, and `content/_index.md:66`
+     is on the home page, which contains no shortcodes and is in neither handout. Only
+     `content/09Reference/_index.md`'s `## Compose profiles` section becomes `pathonly`; gating it
+     also makes the prose at `:36-37` and five `ALLOWLIST` entries (`lint_paths.py:97-101`,
+     `:112-131`) dead, and they go with it.
+  3. **P2.1's selector must be built from `permalink.gotmpl`, not `.RelPermalink`.**
+     `menu.html:149,184,309,345` set `data-nav-id="{{ $url }}"` where `$url` comes from
+     `partial "permalink.gotmpl"`, which appends `index.html` to any link ending in `/` because
+     `disableExplicitIndexURLs` is false (`hugo.jinja:180`). A hand-built `.RelPermalink` selector
+     misses every section page.
+  4. **P2.3 cannot filter prev/next at build time the way the step implies.** There is one HTML
+     output per page and the reader's path is only known client-side, so the walk has to be run once
+     per path at build time and the resulting buttons gated by CSS — same mechanism as the rest of
+     the gate. Both directions therefore emit one `.topbar-button` per path plus one for the
+     no-choice state.
+  5. **The gate CSS only ever hides; it never forces `display` back on for sidebar entries or
+     topbar buttons.** Those elements carry the theme's own responsive `display` rules
+     (`[data-width-s="hide"]` and friends), and a show rule would defeat them. Rules are written as
+     `html[data-deployment-path="X"] … :not(…X…) { display: none }`.
 
 ## Files Changed
 
