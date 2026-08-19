@@ -405,7 +405,7 @@ instruction sets visible.
 - [x] P4.4. Recheck the tab/nesting state machines: `lint_paths.py:254-261` is an `if/elif` chain
       that mis-tracks a `pathtabs` block nested in a plain `tabs` group, and `gen_handouts.py:308`
       rejects nesting. Make `pathonly` nesting either supported or a hard error — not silently wrong.
-- [ ] P4.5. Decide whether to unify the four path-vocabulary declarations (`pathtab.html`,
+- [x] P4.5. Decide whether to unify the four path-vocabulary declarations (`pathtab.html`,
       `gen_handouts.py:42-55`, `lint_paths.py:57`, `site.Params.deploymentPaths`). `CLAUDE.md:109`
       already flags three of them as needing to agree.
 
@@ -416,7 +416,7 @@ instruction sets visible.
 - [x] P5.2. `ai-101/CLAUDE.md` + `k8s-101-workshop/CLAUDE.md:164` (which still says "copy `ai-101`'s
       shortcodes") updated to point at the upstream mechanism. The `k8s-101` side landed in PR #107
       (`f3591d8`); the `ai-101` side in `0ddc46c` plus the `[skip ci]` entry below.
-- [ ] P5.3. Promotion step, per global prefs step 12. **Phase 1's share is done** — see Promotion below.
+- [x] P5.3. Promotion step, per global prefs step 12. **Phase 1's share is done** — see Promotion below.
       Re-walk after Phases 2–4.
 
 ## Implementation Method
@@ -552,7 +552,16 @@ clears. Do not start P1 before P0.
      `repoConfig.json` wins because it is the one Hugo actually reads at build time; the other three
      were copies free to drift. `gen_handouts.py` now derives keys and titles from it (keeping `slug`
      and `weight` local, as generator concerns) and exposes `--list-slugs` for the workflow;
-     `lint_paths.py` imports from `gen_handouts.py`.
+     `lint_paths.py` imports from `gen_handouts.py`. Unifying it surfaced a fifth copy nobody had
+     counted: `handout-pdf.yml:125` hardcoded `for slug in handout-docker handout-k8s`, so a third
+     path would have built a site and shipped two PDFs without failing anything. It now calls
+     `gen_handouts.py --list-slugs`. And `path-lint.yml`'s two `paths:` filters did not list
+     `repoConfig.json`, so editing the vocabulary changed what the linter enforces without triggering
+     it — added to both.
+  7. **The Constraints entry about "one-marker-per-line state machines" is stale as of `d41813c`.**
+     `BLOCK_MARKER_RE` now scans every marker on a line and a marker sharing its line with anything
+     else is its own violation, so the constraint the phasing leaned on no longer holds. Not edited in
+     place, per the `Approved` rule; recorded here.
 
 ## Files Changed
 
@@ -652,7 +661,29 @@ Phase 1's share, done. Re-walk after Phases 2–4; `Status` stays `Approved` unt
     hard way on this PR. Absence of a run is the failure mode and it looks like success.
 - [x] Same mechanism facts promoted to `k8s-101-workshop/CLAUDE.md` via PR #107, plus the
   do-not-copy-`ai-101`'s-shortcodes correction and the `local_copy.sh` shadowing hazard.
-- [ ] `Status:` set to `Complete` — after Phase 5.
+- [x] `Decisions & Commentary` re-walked after Phases 2–4; Phase 2/3/4's share promoted to
+  `ai-101/CLAUDE.md` in `dd44008`:
+  - `pathonly` and its mandatory `{{% %}}` form, with the `RenderString`-separate-render-context
+    reason and the nesting error.
+  - The four gated surfaces, and why the sidebar and prev/next are one change rather than two
+    (relearn's prev/next honours only `params.hidden`).
+  - Why navigation is deliberately **not** default-deny while body content is, and why every gate rule
+    only ever hides — including the `:not(.active)` exemption.
+  - `permalink.gotmpl` not `.RelPermalink` for `data-nav-id`, and the two authoring combinations that
+    are hard build errors *because* a CSS selector matching nothing reports nothing.
+  - The search adapter wrapper, why the index entry shape is not extended, and the autocomplete cache
+    that must be cleared on a path switch.
+  - Two build traps that cost time this session: the last-updated stamp's weekday format defeating an
+    ISO-only normaliser (a fake 17-file regression), and root-owned `public/` where a *partial*
+    `rm -rf` failure is worse than none.
+  - Two stale bullets replaced rather than appended to: the `lint_paths.py` guardrail list, and
+    "declared in three places that must agree" — now one source, `repoConfig.json`.
+- [x] CentralRepo has no `CLAUDE.md`, so P5.1's CentralRepo half is `README.md` (+127 lines, `adb6309`)
+  and `RELEASE_NOTES.md`. Creating one for CentralRepo is a bigger artifact than this plan sized and is
+  left as a follow-up rather than improvised here.
+- [ ] `Status:` set to `Complete` — held open deliberately: promotion is done, but neither branch is
+  pushed and nothing is merged. Flip it when `pathgate-p234` and `pathgate-p4-tooling` are merged and
+  the image has rebuilt.
 
 ## Risks / Open Questions
 
@@ -707,3 +738,10 @@ Phase 1's share, done. Re-walk after Phases 2–4; `Status` stays `Approved` unt
   a larger per-build cost than Hugo itself (639 ms).
 - `CentralRepo/layouts/_default/allpages.html` and `ap-print-*.hugo` are wired to nothing (no output
   format, no `layout:` front matter anywhere). Either wire them up or delete them.
+- **CentralRepo has no `CLAUDE.md`.** 65 repos build against it and the path gate is now ~530 lines of
+  `custom-header.html` there, so the next session touching it starts from `README.md` and the file
+  comments. Worth onboarding properly, separately from this plan.
+- **The gate's DOM effect is unverified in a real browser.** Every claim here rests on comparing
+  generated selectors against rendered markup byte-for-byte, plus the search filter run against the
+  real lunr index in Node. That catches the one silent failure mode (a selector that matches nothing)
+  but not a visual one. This host has no browser; verify in one before the workshop runs.
