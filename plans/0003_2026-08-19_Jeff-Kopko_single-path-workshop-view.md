@@ -741,10 +741,14 @@ Phase 1's share, done. Re-walk after Phases 2–4; `Status` stays `Approved` unt
   a larger per-build cost than Hugo itself (639 ms).
 - `CentralRepo/layouts/_default/allpages.html` and `ap-print-*.hugo` are wired to nothing (no output
   format, no `layout:` front matter anywhere). Either wire them up or delete them.
-- **CentralRepo has no `CLAUDE.md`.** 65 repos build against it and the path gate is now ~530 lines of
-  `custom-header.html` there, so the next session touching it starts from `README.md` and the file
-  comments. Worth onboarding properly, separately from this plan.
-- **The gate's DOM effect is unverified in a real browser.** Every claim here rests on comparing
-  generated selectors against rendered markup byte-for-byte, plus the search filter run against the
-  real lunr index in Node. That catches the one silent failure mode (a selector that matches nothing)
-  but not a visual one. This host has no browser; verify in one before the workshop runs.
+- ~~**CentralRepo has no `CLAUDE.md`.**~~ **Closed 2026-08-19, CentralRepo PR #75 (`d44e1b00`).** It
+  did have one — 199 lines — but `.gitignore:3` ignored it from `7dc90e1` (2026-05-28), so it lived on
+  one machine and never travelled with the branch. Ignore entry removed, file committed, path-gate
+  section added. Free to track: root-level `*.md` is in both image workflows' `paths-ignore`.
+- ~~**The gate's DOM effect is unverified in a real browser.**~~ **Closed 2026-08-19 — Jeff confirmed
+  the gate works in a browser.** The byte-for-byte selector comparison and the Node lunr run caught
+  the silent failure mode; the visual one is now confirmed by hand.
+- **`main` is 17 files / ~1240 lines ahead of `prreviewJune23` in CentralRepo**, because #72/#73/#74
+  went feature-branch → `main` directly. The dev image therefore carries neither the path gate nor the
+  `hugomods/hugo:std-0.165.0` pin, so a dev-image test result is misleading. Needs a `main` →
+  `prreviewJune23` merge. Recorded in CentralRepo's `CLAUDE.md`; not this plan's to fix.
