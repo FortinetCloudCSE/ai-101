@@ -934,6 +934,15 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 
 Now open the UI and confirm the **Audit Log** tab is visible on the right.
 
+Open the FQDN link printed by the `echo` command in the Deploy step above
+(NodePort `30280`).
+
+If you are using Cloud Shell Web Preview instead, forward the UI service and open
+port `8100`:
+
+```bash
+kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+```
 
 ---
 
