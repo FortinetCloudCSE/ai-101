@@ -26,6 +26,7 @@ Expect `ollama` with state `running`. If it is not, redo the Lab 1 deploy step.
 follow your choice.*
 {{% /pathtab %}}
 {{% pathtab path="k8s" %}}
+
 **Kubernetes / Helm** — every command on this page runs in your Cloud Shell session
 against your cluster.
 
@@ -67,13 +68,6 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
-The UI is reachable directly via NodePort:
-```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
-```
-Click the printed link to open the chatbot in the browser.
-
- ![chatbotui](browser.png)
 {{% /pathtab %}}
 {{< /pathtabs >}}
 
@@ -100,6 +94,19 @@ curl -s http://localhost:8001/health | jq .
 {{< pathtabs >}}
 {{% pathtab path="docker" %}}
 Open [http://localhost:8080](http://localhost:8080).
+{{% /pathtab %}}
+{{% pathtab path="k8s" %}}
+
+Open the Kubernetes UI using the NodePort URL.
+
+```bash
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
+```
+
+Click the printed link to open the chatbot in the browser.
+
+ ![chatbotui](browser.png)
+
 {{% /pathtab %}}
 {{< /pathtabs >}}
 
