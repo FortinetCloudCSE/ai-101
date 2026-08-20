@@ -2,7 +2,7 @@
 Date: 2026-08-20
 Owner: Jeff Kopko
 Slug: handout-ci-and-branch-protection-hardening
-Status: Proposed
+Status: Approved
 Supersedes: none
 Superseded-By: none
 Plan File: plans/0004_2026-08-20_Jeff-Kopko_handout-ci-and-branch-protection-hardening.md
@@ -147,7 +147,12 @@ doing for `ai-101` → `UserRepo`. Flagged as an open question if the wider push
 - [ ] P1.2. `path-lint.yml`'s `lint` job: before running `lint_paths.py`, run `gen_handouts.py`
       (not `--check`). If it produces a diff, commit and push to the PR's head ref using the PAT from
       P1.1, with a clear bot commit message. Then run `lint_paths.py` as today — it catches what
-      auto-fix cannot (unclosed blocks, unknown path keys, nesting).
+      auto-fix cannot (unclosed blocks, unknown path keys, nesting). Guard the push step on the secret
+      actually being present and non-empty — this same file lands in `UserRepo` (Phase 4) without the
+      PAT, and a repo with no `deploymentPaths` never produces a diff to push anyway (P3.1's no-op), but
+      a future adopter who sets `deploymentPaths` before provisioning their own PAT must get a clear
+      "stale, run `gen_handouts.py` locally" failure from the existing `--check`/`lint_paths.py` path,
+      not an opaque git-auth error from a push attempt with an empty credential.
 - [ ] P1.3. Add `pull_request` to `handout-pdf.yml`'s `on:` block, mirroring `path-lint.yml`'s existing
       `paths:` filter. This is what makes a real Hugo build failure (the actual incident) visible
       before merge instead of after.
@@ -224,7 +229,12 @@ check nobody has confirmed passes cleanly. Per global prefs, branch-protection c
 go-ahead at that point even though the plan itself is approved here.
 
 ## Plan Changes
-- (none yet — `Proposed`)
+- 2026-08-20, `Proposed` → `Approved`. PAT approach confirmed for P1.1; `HANDOUT_AUTOFIX_PAT` created
+  as a fine-grained PAT (`contents: write`, `ai-101` only, 90-day expiry) and stored as an `ai-101`
+  repository secret — not on `CentralRepo` (repo secrets don't cascade across repos; there was no
+  mechanism there for other repos to reach it anyway) and not on `UserRepo` (confirmed out of scope —
+  no printing need there). P1.2 gained an explicit empty-secret guard, added before implementation
+  started, per the note above.
 
 ## Files Changed
 - (none yet)
