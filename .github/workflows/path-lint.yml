@@ -43,6 +43,46 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || '' }}
+          persist-credentials: false
+
+      # Auto-fix, PRs only: a direct push to main is already too late to fix before
+      # merge, and there is no PR head ref to push back to.
+      - name: Regenerate handouts
+        if: github.event_name == 'pull_request'
+        id: regen
+        run: |
+          python3 scripts/gen_handouts.py
+          if [ -n "$(git status --porcelain -- content/09Reference/handouts)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # GITHUB_TOKEN pushes deliberately do not retrigger workflow runs (GitHub's own
+      # recursion guard), so the just-fixed commit would never get its own green
+      # lint/handouts run -- hence HANDOUT_AUTOFIX_PAT, a fine-grained PAT scoped to
+      # contents:write on this repo only. If the secret is absent (e.g. this workflow
+      # file copied into a repo that hasn't provisioned one yet), no-op cleanly and
+      # revert the working tree so lint_paths.py below reports the real "stale, run
+      # gen_handouts.py locally" failure instead of a spurious pass.
+      - name: Push regenerated handouts
+        if: github.event_name == 'pull_request' && steps.regen.outputs.changed == 'true'
+        env:
+          HANDOUT_AUTOFIX_PAT: ${{ secrets.HANDOUT_AUTOFIX_PAT }}
+        run: |
+          if [ -z "$HANDOUT_AUTOFIX_PAT" ]; then
+            echo "HANDOUT_AUTOFIX_PAT is not set -- leaving handouts as committed so the freshness check below fails with a clear message. Run 'python3 scripts/gen_handouts.py' locally and commit the result." >&2
+            git checkout -- content/09Reference/handouts
+            git clean -fd content/09Reference/handouts
+            exit 0
+          fi
+          git config user.name "ai-101-handout-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add content/09Reference/handouts
+          git commit -m "chore: auto-regenerate stale handouts [handout-autofix]"
+          git push "https://x-access-token:${HANDOUT_AUTOFIX_PAT}@github.com/${{ github.repository }}.git" "HEAD:${{ github.head_ref }}"
 
       - name: Lint deployment paths
         run: python3 scripts/lint_paths.py
