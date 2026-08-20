@@ -93,8 +93,6 @@ Now open the UI and confirm the **Audit Log** tab is visible on the right.
 Open [http://localhost:8080](http://localhost:8080).
 {{% /pathtab %}}
 {{% pathtab path="k8s" %}}
-Open the FQDN link printed by the `echo` command in the Deploy step above
-(NodePort `30280`).
 {{% /pathtab %}}
 {{< /pathtabs >}}
 
