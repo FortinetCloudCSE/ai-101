@@ -9,17 +9,14 @@
 name: Handout PDFs
 
 on:
-  # GitHub Actions does not expand YAML anchors, so the two path lists are
-  # duplicated by necessity -- keep them in sync. This is what makes a real Hugo
-  # build failure (the actual incident) visible before merge instead of only after,
-  # on the push to main.
-  pull_request:
-    paths:
-      - "content/**"
-      - "layouts/**"
-      - "scripts/gen_handouts.py"
-      - "scripts/repoConfig.json"
-      - ".github/workflows/handout-pdf.yml"
+  # No paths: filter on pull_request -- `handouts` is a required status check
+  # (branch protection, 2026-08-20), and a check that never reports because its
+  # own trigger paths: filter skipped the whole workflow blocks merge *forever*,
+  # not just until CI runs. Found blocking this plan's own docs-only close-out
+  # PR (#33), which touches neither content/ nor scripts/. The relevant-files
+  # check below does the equivalent filtering at the job-step level instead,
+  # where a skip still reports a passing check.
+  pull_request: {}
   push:
     branches: ["main"]
     paths:
@@ -51,14 +48,32 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history so the relevant-files diff below can reach the PR's
+          # base commit -- the default shallow (depth 1) checkout only has HEAD.
+          fetch-depth: 0
 
-      # Cheap guard so this file can sit inert in a repo that has never opted into
-      # deploymentPaths (scripts/repoConfig.json) -- needed once this workflow is
-      # copied into other workshop repos. ai-101 always sets deploymentPaths, so this
-      # is a no-op here: has_paths is always "true" and every later step still runs.
-      - name: Check whether any deployment paths are configured
+      # Two independent reasons to skip, checked together so there is one
+      # has_paths output and one set of `if:` guards below:
+      #   1. This PR/push doesn't touch anything that could make a handout
+      #      stale or break the build (relevant-files diff) -- e.g. a
+      #      docs-only PR, now that pull_request has no paths: filter of its
+      #      own (see the `on:` block).
+      #   2. This repo has no deploymentPaths configured at all (P3.1's
+      #      no-op) -- the guard that lets this same file sit inert in a repo
+      #      that has never opted in, e.g. UserRepo. ai-101 always sets
+      #      deploymentPaths, so only reason 1 ever fires here.
+      - name: Check whether this run has anything to do
         id: paths
         run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if git diff --quiet "$base" HEAD -- content layouts scripts/gen_handouts.py scripts/repoConfig.json .github/workflows/handout-pdf.yml; then
+              echo "No relevant files changed in this PR -- nothing that could make a handout stale or break the build. Skipping."
+              echo "has_paths=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           if [ -z "$(python3 scripts/gen_handouts.py --list-slugs)" ]; then
             echo "No deploymentPaths configured in scripts/repoConfig.json -- handouts are inert here. Skipping."
             echo "has_paths=false" >> "$GITHUB_OUTPUT"
