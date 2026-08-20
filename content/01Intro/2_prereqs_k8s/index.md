@@ -202,15 +202,6 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 ```
 
-Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
-```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
-```
-
-Click the printed link to open the chatbot UI in your browser.
-
-  ![chatbotui](browser.png)
-
 {{% notice style="tip" title="Keep it running" %}}
 Leave the release running as you work through the labs. Each lab section tells you which values file to upgrade to. Only uninstall when you are completely done.
 {{% /notice %}}
