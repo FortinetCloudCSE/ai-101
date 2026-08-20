@@ -337,15 +337,14 @@ curl -s http://localhost:8001/health | jq .
 }
 ```
 
-Now open the UI:
-
 Open [http://localhost:8080](http://localhost:8080).
 
 ---
 
 ### Step 1 — Single tool call
 
-In the chat box:
+In the chat box UI: 
+
 > Who is in the Engineering department?
 
 Watch the **Trace** panel on the right. You should see:

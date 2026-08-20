@@ -209,15 +209,6 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab3.yaml
 helm upgrade --install ai101 ./ai101 -f ai101/values-lab4.yaml
 ```
 
-Access the UI (Lab 2 and later only — the UI is not deployed in Lab 1):
-```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
-```
-
-Click the printed link to open the chatbot UI in your browser.
-
-  ![chatbotui](01intro-2_prereqs_k8s-browser.png)
-
 {{% notice style="tip" title="Keep it running" %}}
 Leave the release running as you work through the labs. Each lab section tells you which values file to upgrade to. Only uninstall when you are completely done.
 {{% /notice %}}
@@ -449,11 +440,6 @@ helm upgrade --install ai101 ./ai101 -f ai101/values-lab2.yaml
 kubectl wait deployment/ai101-agent --for=condition=Available --timeout=120s
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
-The UI is reachable directly via NodePort — no port-forward needed:
-```bash
-echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
-```
-Click the printed link to open the chatbot.
 
 Confirm the agent is up and in hardcoded mode:
 
@@ -474,23 +460,22 @@ curl -s http://localhost:8001/health | jq .
 }
 ```
 
-Now open the UI:
-
-Open the FQDN link printed by the `echo` command in the Deploy step above
-(NodePort `30280`).
-
-If you are using Cloud Shell Web Preview instead, forward the UI service and open
-port `8100`:
+Open the Kubernetes UI using the NodePort URL.
 
 ```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
+echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
 ```
+
+Click the printed link to open the chatbot in the browser.
+
+ ![chatbotui](03agents-1_lab-browser.png)
 
 ---
 
 ### Step 1 — Single tool call
 
-In the chat box:
+In the chat box UI: 
+
 > Who is in the Engineering department?
 
 Watch the **Trace** panel on the right. You should see:
@@ -703,7 +688,7 @@ Start the agent port-forward only if it is not already forwarded (check with `jo
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
 
-The UI is reachable directly via NodePort — no port-forward needed for the UI itself:
+The UI is reachable directly via NodePort:
 
 ```bash
 echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
@@ -725,13 +710,6 @@ Open the UI, then ask the question below.
 
 Open the FQDN link printed by the `echo` command in the Deploy step above
 (NodePort `30280`).
-
-If you are using Cloud Shell Web Preview instead, forward the UI service and open
-port `8100`:
-
-```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
-```
 
 > Who is in the Engineering department?
 
@@ -956,15 +934,6 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 
 Now open the UI and confirm the **Audit Log** tab is visible on the right.
 
-Open the FQDN link printed by the `echo` command in the Deploy step above
-(NodePort `30280`).
-
-If you are using Cloud Shell Web Preview instead, forward the UI service and open
-port `8100`:
-
-```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
-```
 
 ---
 
