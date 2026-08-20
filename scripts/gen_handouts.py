@@ -59,9 +59,11 @@ def load_paths() -> list[dict]:
     selection from ``anchorize(title)``, so retitling or normalising a path silently
     resets everyone's choice.
 
-    A missing or empty list is fatal rather than an empty run: with no paths this script
-    writes no handouts and ``--check`` then passes vacuously, which is the exact silent
-    failure this indirection is supposed to remove.
+    A missing or empty list means this repo has not opted into deployment paths at
+    all -- an empty list of paths, not an error. ``main()`` turns that into a clean
+    no-op (log a line, exit 0, touch nothing) rather than silently generating zero
+    handouts and letting ``--check`` pass vacuously. A missing config file or invalid
+    JSON is still fatal: those are real errors, not "not opted in".
     """
     try:
         config = json.loads(REPO_CONFIG.read_text(encoding="utf-8"))
@@ -72,10 +74,7 @@ def load_paths() -> list[dict]:
 
     entries = config.get("deploymentPaths")
     if not entries:
-        raise SystemExit(
-            f"{REPO_CONFIG}: deploymentPaths is missing or empty; without it there is no "
-            "path vocabulary and the handouts would silently generate nothing"
-        )
+        return []
 
     paths = []
     for i, entry in enumerate(entries):
@@ -749,6 +748,13 @@ def main() -> int:
     if args.list_slugs:
         for path in PATHS:
             print(path["slug"])
+        return 0
+
+    if not PATHS:
+        print(
+            f"{REPO_CONFIG}: deploymentPaths is missing or empty; handout generation "
+            "is inert here. Nothing to do."
+        )
         return 0
 
     wanted = targets()
