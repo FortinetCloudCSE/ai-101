@@ -141,10 +141,10 @@ doing for `ai-101` → `UserRepo`. Flagged as an open question if the wider push
 
 ### Phase 1 — `ai-101`: auto-fix stale handouts on PR, and make Hugo build failures visible pre-merge
 
-- [ ] P1.1. **Decision, confirm at approval**: mint a fine-grained PAT (`contents: write`, `ai-101`
+- [x] P1.1. **Decision, confirm at approval**: mint a fine-grained PAT (`contents: write`, `ai-101`
       only) and store as a repo secret — or skip auto-fix and keep Phase 1 to just P1.3 (fail-loud PR
       gate). Default recommendation: mint the PAT.
-- [ ] P1.2. `path-lint.yml`'s `lint` job: before running `lint_paths.py`, run `gen_handouts.py`
+- [x] P1.2. `path-lint.yml`'s `lint` job: before running `lint_paths.py`, run `gen_handouts.py`
       (not `--check`). If it produces a diff, commit and push to the PR's head ref using the PAT from
       P1.1, with a clear bot commit message. Then run `lint_paths.py` as today — it catches what
       auto-fix cannot (unclosed blocks, unknown path keys, nesting). Guard the push step on the secret
@@ -153,13 +153,13 @@ doing for `ai-101` → `UserRepo`. Flagged as an open question if the wider push
       a future adopter who sets `deploymentPaths` before provisioning their own PAT must get a clear
       "stale, run `gen_handouts.py` locally" failure from the existing `--check`/`lint_paths.py` path,
       not an opaque git-auth error from a push attempt with an empty credential.
-- [ ] P1.3. Add `pull_request` to `handout-pdf.yml`'s `on:` block, mirroring `path-lint.yml`'s existing
+- [x] P1.3. Add `pull_request` to `handout-pdf.yml`'s `on:` block, mirroring `path-lint.yml`'s existing
       `paths:` filter. This is what makes a real Hugo build failure (the actual incident) visible
       before merge instead of after.
-- [ ] P1.4. Guard `handout-pdf.yml`'s expensive steps (image pull, Hugo build, Chrome PDF render)
+- [x] P1.4. Guard `handout-pdf.yml`'s expensive steps (image pull, Hugo build, Chrome PDF render)
       behind a cheap first step that exits clean when `gen_handouts.py --list-slugs` prints nothing —
       needed for Phase 4, where this same file lands in repos with no `deploymentPaths` at all.
-- [ ] P1.5. Verify end-to-end on a real throwaway PR: (a) hand-stale a handout, confirm the auto-fix
+- [x] P1.5. Verify end-to-end on a real throwaway PR: (a) hand-stale a handout, confirm the auto-fix
       commit lands and both checks go green afterward; (b) reproduce the original empty-`pathtab`
       defect, confirm `handouts` fails on the PR itself, pre-merge.
 
@@ -176,12 +176,12 @@ doing for `ai-101` → `UserRepo`. Flagged as an open question if the wider push
 
 ### Phase 3 — Make the tooling safe to exist in a repo that hasn't opted in
 
-- [ ] P3.1. `gen_handouts.py`: missing/empty `deploymentPaths` becomes a clean no-op (log a line, exit
+- [x] P3.1. `gen_handouts.py`: missing/empty `deploymentPaths` becomes a clean no-op (log a line, exit
       0, write and delete nothing) instead of `SystemExit`.
-- [ ] P3.2. `lint_paths.py`: same, since it imports `PATHS` from `gen_handouts.py`.
-- [ ] P3.3. Regression-verify on `ai-101` itself (which always sets `deploymentPaths`): full local
+- [x] P3.2. `lint_paths.py`: same, since it imports `PATHS` from `gen_handouts.py`.
+- [x] P3.3. Regression-verify on `ai-101` itself (which always sets `deploymentPaths`): full local
       build, `lint_paths.py`, `gen_handouts.py --check` — all identical to pre-change behavior.
-- [ ] P3.4. Verify the no-op path directly against a `repoConfig.json` with no `deploymentPaths` key
+- [x] P3.4. Verify the no-op path directly against a `repoConfig.json` with no `deploymentPaths` key
       (e.g. `UserRepo`'s current one) — confirm exit 0, no crash, no files touched.
 
 ### Phase 4 — Propagate the opt-in tooling into `UserRepo`, inert by default
@@ -237,10 +237,54 @@ go-ahead at that point even though the plan itself is approved here.
   started, per the note above.
 
 ## Files Changed
-- (none yet)
+- `scripts/gen_handouts.py` — `load_paths()` returns `[]` instead of `SystemExit` on a missing/empty
+  `deploymentPaths`; `main()` gained an early no-op return (log line, exit 0) when `PATHS` is empty.
+- `.github/workflows/path-lint.yml` — `lint` job: checkout now pins `ref` to `github.head_ref` on PRs
+  (`persist-credentials: false`); added "Regenerate handouts" (runs `gen_handouts.py`, detects a diff
+  via `git status --porcelain`) and "Push regenerated handouts" (commits + pushes via
+  `HANDOUT_AUTOFIX_PAT` over an explicit HTTPS URL, or reverts the working tree and no-ops if the
+  secret is empty), both gated to `github.event_name == 'pull_request'`.
+- `.github/workflows/handout-pdf.yml` — added a `pull_request` trigger (paths list mirrors the existing
+  `push` list); added a "Check whether any deployment paths are configured" step (`id: paths`, based on
+  `gen_handouts.py --list-slugs`) and gated every subsequent step behind
+  `if: steps.paths.outputs.has_paths == 'true'`.
+- `plans/0004_...md` — this file (checkboxes, verification results).
 
 ## Session Summary
-- (write at end)
+Implemented and verified Phases 1 and 3 on branch `handout-ci-autofix`, PR
+[#31](https://github.com/FortinetCloudCSE/ai-101/pull/31).
+
+**Phase 3 (no-op tooling) verification:**
+- `gen_handouts.py --check` and `lint_paths.py` unchanged on `ai-101` itself (which always sets
+  `deploymentPaths`): "Handouts up to date (11 files)" / "lint_paths: clean (14 pages, handouts up to
+  date)".
+- Full CI-equivalent Hugo build: 42 pages, 15 non-page, 13 static, **0 WARN/ERROR** — matches the
+  documented baseline exactly.
+- No-op path verified directly against a scratch fixture built from
+  `/home/ubuntu/pythonProjects/UserRepo/scripts/repoConfig.json` (no `deploymentPaths` key): default,
+  `--check`, and `--list-slugs` modes of `gen_handouts.py`, plus `lint_paths.py`, all exit 0, write
+  nothing, crash nothing.
+
+**Phase 1 (CI auto-fix + pre-merge gate) verification — both done as real, not manufactured, incidents:**
+- **P1.5(a)**: PR #30 ("update port", merged same day) removed content from the k8s `pathtab` on
+  `content/05Security/1_lab/index.md` without regenerating `handout-k8s`, and merged anyway because
+  `lint` failing isn't a required check pre-Phase-2 — confirmed via `gh pr view 30`
+  (`"name":"lint","conclusion":"FAILURE"`), a live instance of the exact problem this plan targets.
+  Merging `main` into `handout-ci-autofix` (commit `157b031`) picked up that drift; the `lint` job's new
+  auto-fix step detected the diff, committed, and pushed via `HANDOUT_AUTOFIX_PAT` (commit `9aa2aa4`,
+  message `chore: auto-regenerate stale handouts [handout-autofix]`). That PAT push retriggered PR
+  checks (proving the `GITHUB_TOKEN`-doesn't-retrigger concern was correctly designed around) — both
+  `lint` and `handouts` are green on the new head (runs `32416989029` / `32416989043`).
+- **P1.5(b)**: throwaway PR [#32](https://github.com/FortinetCloudCSE/ai-101/pull/32), branched from
+  `handout-ci-autofix` so the new workflow logic was in effect, reproduced the original incident shape
+  by emptying the same k8s `pathtab` body. `handouts` failed pre-merge with the actual Hugo build error
+  (`ERROR ... the "k8s" pathtab in this pathtabs block is empty ...`, run `32417227478`) — `lint` passed,
+  as expected, since neither the auto-fix nor `lint_paths.py` validates non-empty tab bodies; only
+  Hugo's own `errorf` catches it, which is exactly why P1.3 (running the real build on `pull_request`)
+  is the fix. PR #32 closed unmerged and the throwaway branch deleted.
+
+Plan stays `Approved` — Phase 2 (branch protection) and Phases 4/5 (`UserRepo` propagation) are
+out of scope for this session and handled separately.
 
 ## Promotion
 - [ ] `Decisions & Commentary` walked
