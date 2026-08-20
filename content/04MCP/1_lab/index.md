@@ -82,7 +82,7 @@ Start the agent port-forward only if it is not already forwarded (check with `jo
 kubectl port-forward svc/ai101-agent 8001:8001 > /tmp/ai101-agent-port-forward.log 2>&1 < /dev/null &
 ```
 
-The UI is reachable directly via NodePort — no port-forward needed for the UI itself:
+The UI is reachable directly via NodePort:
 
 ```bash
 echo "UI: http://$(whoami)-worker.$(az group show -n $(whoami)-k8s101-workshop --query location -o tsv).cloudapp.azure.com:30280"
@@ -109,15 +109,10 @@ Open the UI, then ask the question below.
 Open [http://localhost:8080](http://localhost:8080).
 {{% /pathtab %}}
 {{% pathtab path="k8s" %}}
+
 Open the FQDN link printed by the `echo` command in the Deploy step above
 (NodePort `30280`).
 
-If you are using Cloud Shell Web Preview instead, forward the UI service and open
-port `8100`:
-
-```bash
-kubectl port-forward svc/ai101-ui 8100:80 > /tmp/ai101-ui-port-forward.log 2>&1 < /dev/null &
-```
 {{% /pathtab %}}
 {{< /pathtabs >}}
 
