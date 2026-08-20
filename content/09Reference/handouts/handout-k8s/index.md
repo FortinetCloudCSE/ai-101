@@ -934,8 +934,6 @@ curl -s http://localhost:8001/health | jq '{tool_mode, transparency}'
 
 Now open the UI and confirm the **Audit Log** tab is visible on the right.
 
-Open the FQDN link printed by the `echo` command in the Deploy step above
-(NodePort `30280`).
 
 ---
 
