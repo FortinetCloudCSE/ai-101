@@ -257,6 +257,11 @@ go-ahead at that point even though the plan itself is approved here.
   `content/02Hugo/7_printable_handouts/index.md`.
 - `ai-101`, `CentralRepo`, `UserRepo`: branch protection on `main` — `enforce_admins: true` (all
   three); `ai-101` additionally gained `lint` and `handouts` as required status-check contexts.
+- `ai-101` PR #33 (2nd commit) + `UserRepo` PR #75: `path-lint.yml`/`handout-pdf.yml` — moved the
+  `pull_request` `paths:` filter from the trigger into a job-level check, so a required check always
+  reports instead of silently never running for PRs outside the old filter. See Addendum 2 below.
+- `CentralRepo` PR #83: `CLAUDE.md` — `enforce_admins: true` recorded, preventive note added before
+  `ci.yml`'s checks are ever made required (same `paths-ignore` shape as the bug above).
 
 ## Session Summary
 Implemented and verified Phases 1 and 3 on branch `handout-ci-autofix`, PR
@@ -323,6 +328,31 @@ the actual Hugo build now fails before merge, not after; and nobody — includin
 change on `ai-101`'s `main` without going through that gate. `CentralRepo` and `UserRepo` no longer
 allow an admin bypass either, though their own required-check contexts are unchanged (see Open
 Questions, deliberately left for a separate decision).
+
+**Addendum 2 — a bug Phase 2 itself exposed, found and fixed same-day:**
+
+Making `lint`/`handouts` required immediately blocked this plan's own docs-only close-out PR
+([#33](https://github.com/FortinetCloudCSE/ai-101/pull/33)): both workflows' `pull_request` triggers
+carried their own `paths:` filter, so a PR touching only `CLAUDE.md`/`plans/` never made either
+workflow run at all — and a required check that never reports blocks merge *forever*, not "until CI
+runs," which reads exactly like a stuck PR unless you know to look for a missing check rather than a
+failing one. `gh-merge-verify`'s exit 4 ("blocked, nothing a wait fixes") is what surfaced it
+immediately rather than as a silent hang.
+
+Fixed by moving the filtering from the trigger (`pull_request: {}`, no `paths:`) into a job-level check
+that still reports: `lint` is cheap enough to just always run in full; `handouts` diffs the PR against
+its base (`fetch-depth: 0` + `git diff --quiet $base HEAD -- ...`) and skips its expensive steps —
+while still reporting success — when nothing relevant changed. Landed as PR #33's second commit, then
+promoted into `CLAUDE.md`.
+
+Same fix applied to `UserRepo`'s copies (PR
+[#75](https://github.com/FortinetCloudCSE/UserRepo/pull/75)) even though `UserRepo` doesn't require
+these checks yet — they're the copies future adopters will actually use, so the same latent bug
+shouldn't ship in them. And `CentralRepo/CLAUDE.md` got a preventive note (PR
+[#83](https://github.com/FortinetCloudCSE/CentralRepo/pull/83)): `ci.yml`'s `pull_request` trigger uses
+`paths-ignore: ["**.md"]`, the same shape in the other direction, and would hit the identical trap the
+day anyone makes `lint-and-validate`/`hugo-build` required there — flagged before it happens rather
+than after.
 
 ## Promotion
 - [x] `Decisions & Commentary` walked
